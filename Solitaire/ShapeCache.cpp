@@ -22,7 +22,10 @@ using namespace Microsoft::Graphics::Canvas::Text;
 ShapeCache::ShapeCache(
     Compositor const& compositor)
 {
-    FillCache(compositor);
+    FillCache(
+        compositor,
+        L"Segoe UI",
+        36);
 }
 
 CompositionPathGeometry ShapeCache::GetPathGeometry(
@@ -32,7 +35,9 @@ CompositionPathGeometry ShapeCache::GetPathGeometry(
 }
 
 void ShapeCache::FillCache(
-    Compositor const& compositor)
+    Compositor const& compositor,
+    hstring const& fontFamily,
+    float fontSize)
 {
     hstring faces[] = 
     {
@@ -75,8 +80,8 @@ void ShapeCache::FillCache(
     for (auto& card : cards)
     {
         auto textFormat = CanvasTextFormat();
-        textFormat.FontFamily(L"Segoe UI");
-        textFormat.FontSize(48);
+        textFormat.FontFamily(fontFamily);
+        textFormat.FontSize(fontSize);
         auto textLayout = CanvasTextLayout(device, card, textFormat, 500, 0);
         auto geometry = CanvasGeometry::CreateText(textLayout);
 

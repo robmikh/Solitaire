@@ -10,7 +10,10 @@ public:
 
 private:
 
-    void FillCache(winrt::Windows::UI::Composition::Compositor const& compositor);
+    void FillCache(
+        winrt::Windows::UI::Composition::Compositor const& compositor,
+        winrt::hstring const& fontFamily,
+        float fontSize);
 
 private:
     std::map<winrt::hstring, winrt::Windows::UI::Composition::CompositionPathGeometry> m_geometryCache;

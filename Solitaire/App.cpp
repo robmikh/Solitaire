@@ -48,31 +48,16 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
     void SetWindow(CoreWindow const & window)
     {
         Compositor compositor;
+        m_shapeCache = std::make_unique<ShapeCache>(compositor);
         ContainerVisual root = compositor.CreateContainerVisual();
         m_target = compositor.CreateTargetForCurrentView();
         m_target.Root(root);
         m_visuals = root.Children();
 
-        m_shapeCache = std::make_unique<ShapeCache>(compositor);
-        auto cardVisual = compositor.CreateSpriteVisual();
-        cardVisual.Size({ 175, 250 });
-        cardVisual.Brush(compositor.CreateColorBrush(Colors::White()));
-        auto roundedRectGeometry = compositor.CreateRoundedRectangleGeometry();
-        roundedRectGeometry.CornerRadius({ 10, 10 });
-        roundedRectGeometry.Size({ 175, 250 });
-        cardVisual.Clip(compositor.CreateGeometricClip(roundedRectGeometry));
+        auto cardVisual = BuildCard(compositor, L"K♥", Colors::Crimson());
         m_visuals.InsertAtTop(cardVisual);
-        auto shapeVisual = compositor.CreateShapeVisual();
-        auto shapeContainer = compositor.CreateContainerShape();
-        shapeVisual.Shapes().Append(shapeContainer);
-        shapeVisual.RelativeSizeAdjustment({ 1, 1 });
-        cardVisual.Children().InsertAtTop(shapeVisual);
-        auto pathGeometry = m_shapeCache->GetPathGeometry(L"K♠");
-        auto pathShape = compositor.CreateSpriteShape(pathGeometry);
-        pathShape.StrokeBrush(compositor.CreateColorBrush(Colors::Red()));
-        pathShape.FillBrush(compositor.CreateColorBrush(Colors::Crimson()));
-        pathShape.StrokeThickness(1);
-        shapeContainer.Shapes().Append(pathShape);
+        cardVisual = BuildCard(compositor, L"Q♠", Colors::Black());
+        m_visuals.InsertAtTop(cardVisual);
 
         window.PointerPressed({ this, &App::OnPointerPressed });
         window.PointerMoved({ this, &App::OnPointerMoved });
@@ -81,6 +66,33 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
         {
             m_selected = nullptr;
         });
+    }
+
+    Visual BuildCard(
+        Compositor const& compositor, 
+        hstring const& card,
+        Color const& color)
+    {
+        auto shapeVisual = compositor.CreateShapeVisual();
+        auto shapeContainer = compositor.CreateContainerShape();
+        shapeVisual.Shapes().Append(shapeContainer);
+        shapeVisual.Size({ 175, 250 });
+
+        auto roundedRectGeometry = compositor.CreateRoundedRectangleGeometry();
+        roundedRectGeometry.CornerRadius({ 10, 10 });
+        roundedRectGeometry.Size({ 175, 250 });
+        auto rectShape = compositor.CreateSpriteShape(roundedRectGeometry);
+        rectShape.StrokeBrush(compositor.CreateColorBrush(Colors::Gray()));
+        rectShape.FillBrush(compositor.CreateColorBrush(Colors::White()));
+        rectShape.StrokeThickness(2);
+        shapeContainer.Shapes().Append(rectShape);
+
+        auto pathGeometry = m_shapeCache->GetPathGeometry(card);
+        auto pathShape = compositor.CreateSpriteShape(pathGeometry);
+        pathShape.FillBrush(compositor.CreateColorBrush(color));
+        shapeContainer.Shapes().Append(pathShape);
+
+        return shapeVisual;
     }
 
     void OnPointerPressed(IInspectable const &, PointerEventArgs const & args)
@@ -108,10 +120,6 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
             m_visuals.Remove(m_selected);
             m_visuals.InsertAtTop(m_selected);
         }
-        else
-        {
-            AddVisual(point);
-        }
     }
 
     void OnPointerMoved(IInspectable const &, PointerEventArgs const & args)
@@ -127,45 +135,6 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
                 0.0f
             });
         }
-    }
-
-    void AddVisual(float2 const point)
-    {
-        Compositor compositor = m_visuals.Compositor();
-        SpriteVisual visual = compositor.CreateSpriteVisual();
-
-        static Color colors[] =
-        {
-            { 0xDC, 0x5B, 0x9B, 0xD5 },
-            { 0xDC, 0xED, 0x7D, 0x31 },
-            { 0xDC, 0x70, 0xAD, 0x47 },
-            { 0xDC, 0xFF, 0xC0, 0x00 }
-        };
-
-        static unsigned last = 0;
-        unsigned const next = ++last % _countof(colors);
-        visual.Brush(compositor.CreateColorBrush(colors[next]));
-
-        float const BlockSize = 100.0f;
-
-        visual.Size(
-        {
-            BlockSize,
-            BlockSize
-        });
-
-        visual.Offset(
-        {
-            point.x - BlockSize / 2.0f,
-            point.y - BlockSize / 2.0f,
-            0.0f,
-        });
-
-        m_visuals.InsertAtTop(visual);
-
-        m_selected = visual;
-        m_offset.x = -BlockSize / 2.0f;
-        m_offset.y = -BlockSize / 2.0f;
     }
 };
 

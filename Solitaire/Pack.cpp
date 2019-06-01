@@ -63,8 +63,14 @@ Pack::Pack(std::shared_ptr<ShapeCache> const& shapeCache)
         {
             auto suit = (Suit)(j);
             auto card = Card(face, suit);
-            auto compositionCard = CompositionCard(card, m_shapeCache);
-            m_cards.push_back(compositionCard);
+            m_cards.push_back(std::make_shared<CompositionCard>(card, m_shapeCache));
         }
     }
+}
+
+void Pack::Shuffle()
+{
+    std::random_device rd;
+    std::mt19937 g(rd());
+    std::shuffle(m_cards.begin(), m_cards.end(), g);
 }

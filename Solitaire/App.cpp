@@ -58,13 +58,14 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
         m_visuals = root.Children();
 
         m_pack = std::make_unique<Pack>(m_shapeCache);
+        m_pack->Shuffle();
         auto cards = m_pack->Cards();
 
         auto count = 0;
         auto textHeight = m_shapeCache->TextHeight();
         for (auto& card : cards)
         {
-            auto visual = card.Root();
+            auto visual = card->Root();
             visual.Offset({ 0, count * textHeight, 0 });
             m_visuals.InsertAtTop(visual);
 

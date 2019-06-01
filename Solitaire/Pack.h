@@ -24,9 +24,10 @@ public:
     Pack(std::shared_ptr<ShapeCache> const& shapeCache);
     ~Pack() {}
 
-    const std::vector<CompositionCard>& Cards() const { return m_cards; }
+    const std::vector<std::shared_ptr<CompositionCard>>& Cards() const { return m_cards; }
+    void Shuffle();
 
 private:
     std::shared_ptr<ShapeCache> m_shapeCache;
-    std::vector<CompositionCard> m_cards;
+    std::vector<std::shared_ptr<CompositionCard>> m_cards;
 };

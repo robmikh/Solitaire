@@ -1,5 +1,7 @@
 ﻿#include "pch.h"
+#include "Card.h"
 #include "ShapeCache.h"
+#include "Pack.h"
 
 using namespace winrt;
 
@@ -17,7 +19,8 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
     Visual m_selected{ nullptr };
     float2 m_offset{};
 
-    std::unique_ptr<ShapeCache> m_shapeCache;
+    std::shared_ptr<ShapeCache> m_shapeCache;
+    std::unique_ptr<Pack> m_pack;
 
     IFrameworkView CreateView()
     {
@@ -48,16 +51,25 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
     void SetWindow(CoreWindow const & window)
     {
         Compositor compositor;
-        m_shapeCache = std::make_unique<ShapeCache>(compositor);
+        m_shapeCache = std::make_shared<ShapeCache>(compositor);
         ContainerVisual root = compositor.CreateContainerVisual();
         m_target = compositor.CreateTargetForCurrentView();
         m_target.Root(root);
         m_visuals = root.Children();
 
-        auto cardVisual = BuildCard(compositor, L"K♥", Colors::Crimson());
-        m_visuals.InsertAtTop(cardVisual);
-        cardVisual = BuildCard(compositor, L"Q♠", Colors::Black());
-        m_visuals.InsertAtTop(cardVisual);
+        m_pack = std::make_unique<Pack>(m_shapeCache);
+        auto cards = m_pack->Cards();
+
+        auto count = 0;
+        auto textHeight = m_shapeCache->TextHeight();
+        for (auto& card : cards)
+        {
+            auto visual = card.Root();
+            visual.Offset({ 0, count * textHeight, 0 });
+            m_visuals.InsertAtTop(visual);
+
+            count++;
+        }
 
         window.PointerPressed({ this, &App::OnPointerPressed });
         window.PointerMoved({ this, &App::OnPointerMoved });
@@ -66,33 +78,6 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
         {
             m_selected = nullptr;
         });
-    }
-
-    Visual BuildCard(
-        Compositor const& compositor, 
-        hstring const& card,
-        Color const& color)
-    {
-        auto shapeVisual = compositor.CreateShapeVisual();
-        auto shapeContainer = compositor.CreateContainerShape();
-        shapeVisual.Shapes().Append(shapeContainer);
-        shapeVisual.Size({ 175, 250 });
-
-        auto roundedRectGeometry = compositor.CreateRoundedRectangleGeometry();
-        roundedRectGeometry.CornerRadius({ 10, 10 });
-        roundedRectGeometry.Size({ 175, 250 });
-        auto rectShape = compositor.CreateSpriteShape(roundedRectGeometry);
-        rectShape.StrokeBrush(compositor.CreateColorBrush(Colors::Gray()));
-        rectShape.FillBrush(compositor.CreateColorBrush(Colors::White()));
-        rectShape.StrokeThickness(2);
-        shapeContainer.Shapes().Append(rectShape);
-
-        auto pathGeometry = m_shapeCache->GetPathGeometry(card);
-        auto pathShape = compositor.CreateSpriteShape(pathGeometry);
-        pathShape.FillBrush(compositor.CreateColorBrush(color));
-        shapeContainer.Shapes().Append(pathShape);
-
-        return shapeVisual;
     }
 
     void OnPointerPressed(IInspectable const &, PointerEventArgs const & args)

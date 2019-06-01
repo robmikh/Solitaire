@@ -20,7 +20,7 @@ using namespace Microsoft::Graphics::Canvas::Text;
 
 
 ShapeCache::ShapeCache(
-    Compositor const& compositor)
+    ::Compositor const& compositor)
 {
     FillCache(
         compositor,
@@ -35,7 +35,7 @@ CompositionPathGeometry ShapeCache::GetPathGeometry(
 }
 
 void ShapeCache::FillCache(
-    Compositor const& compositor,
+    ::Compositor const& compositor,
     hstring const& fontFamily,
     float fontSize)
 {
@@ -77,6 +77,7 @@ void ShapeCache::FillCache(
 
     auto device = CanvasDevice();
     m_geometryCache.clear();
+    auto height = -1.0f;
     for (auto& card : cards)
     {
         auto textFormat = CanvasTextFormat();
@@ -89,5 +90,14 @@ void ShapeCache::FillCache(
         auto pathGeoemtry = compositor.CreatePathGeometry(compositionPath);
 
         m_geometryCache.emplace(card, pathGeoemtry);
+
+        if (height < 0)
+        {
+            height = textLayout.LayoutBounds().Height;
+        }
+        WINRT_ASSERT(height == textLayout.LayoutBounds().Height);
     }
+
+    m_compositor = compositor;
+    m_textHeight = height;
 }

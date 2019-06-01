@@ -4,10 +4,13 @@
     <ClCompile Include="App.cpp" />
     <ClCompile Include="pch.cpp" />
     <ClCompile Include="ShapeCache.cpp" />
+    <ClCompile Include="Pack.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
     <ClInclude Include="ShapeCache.h" />
+    <ClInclude Include="Pack.h" />
+    <ClInclude Include="Card.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="Assets\Logo.scale-100.png">

@@ -65,8 +65,11 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
         auto textHeight = m_shapeCache->TextHeight();
         for (auto& card : cards)
         {
+            auto row = count % 13;
+            auto stack = count / 13;
+
             auto visual = card->Root();
-            visual.Offset({ 0, count * textHeight, 0 });
+            visual.Offset({ (float)stack * (visual.Size().x + 15.0f), row * textHeight, 0 });
             m_visuals.InsertAtTop(visual);
 
             count++;

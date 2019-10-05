@@ -31,7 +31,9 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
     ContainerVisual m_boardLayer{ nullptr };
     ContainerVisual m_selectedLayer{ nullptr };
     VisualCollection m_visuals{ nullptr };
-    Visual m_selected{ nullptr };
+    Visual m_selectedVisual{ nullptr };
+    std::vector<std::shared_ptr<CompositionCard>> m_selectedCards;
+    std::shared_ptr<CardStack> m_lastStack;
     float2 m_offset{};
 
     std::shared_ptr<ShapeCache> m_shapeCache;
@@ -139,11 +141,7 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
 
         window.PointerPressed({ this, &App::OnPointerPressed });
         window.PointerMoved({ this, &App::OnPointerMoved });
-
-        window.PointerReleased([&](auto && ...)
-        {
-            m_selected = nullptr;
-        });
+        window.PointerReleased({ this, &App::OnPointerReleased });
     }
 
     void OnPointerPressed(IInspectable const &, PointerEventArgs const & args)
@@ -211,18 +209,29 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
                     for (auto& stack : m_stacks)
                     {
                         auto index = stack->HitTest(point);
-                        if (index >= 0)
+                        if (stack->CanSplit(index))
                         {
-                            auto card = stack->Cards()[index];
-                            m_selected = stack->Base();
+                            m_lastStack = stack;
+                            m_selectedCards = stack->Split(index);
+                            m_selectedVisual = m_selectedCards.front()->Root();
+
+                            float3 accumulatedOffset = stack->Base().Offset();
+                            if (index > 0)
+                            {
+                                auto textHeight = m_shapeCache->TextHeight();
+                                accumulatedOffset.y += textHeight * index;
+                            }
+
+                            m_selectedVisual.Offset(accumulatedOffset);
                         }
                         auto cards = stack->Cards();
 
-                        if (m_selected)
+                        if (m_selectedVisual)
                         {
-                            float3 const offset = m_selected.Offset();
+                            float3 const offset = m_selectedVisual.Offset();
                             m_offset.x = offset.x - point.x;
                             m_offset.y = offset.y - point.y;
+                            break;
                         }
                     }
                 }
@@ -235,26 +244,72 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
             }
         }
 
-        if (m_selected)
+        if (m_selectedVisual)
         {
-            m_visuals.Remove(m_selected);
-            m_visuals.InsertAtTop(m_selected);
+            //m_visuals.Remove(m_selectedVisual);
+            m_selectedLayer.Children().InsertAtTop(m_selectedVisual);
         }
     }
 
     void OnPointerMoved(IInspectable const &, PointerEventArgs const & args)
     {
-        if (m_selected)
+        if (m_selectedVisual)
         {
             float2 const point = args.CurrentPoint().Position();
 
-            m_selected.Offset(
+            m_selectedVisual.Offset(
             {
                 point.x + m_offset.x,
                 point.y + m_offset.y,
                 0.0f
             });
         }
+    }
+
+    void OnPointerReleased(IInspectable const&, PointerEventArgs const& args)
+    {
+        if (m_selectedVisual)
+        {
+            float2 const point = args.CurrentPoint().Position();
+            m_selectedLayer.Children().RemoveAll();
+
+            std::shared_ptr<CardStack> foundStack;
+            for (auto& stack : m_stacks)
+            {
+                auto index = stack->HitTest(point);
+                if (index >= 0)
+                {
+                    foundStack = stack;
+                    break;
+                }
+            }
+
+            if (foundStack && foundStack->CanAdd(m_selectedCards.front()))
+            {
+                foundStack->Add(m_selectedCards);
+
+                // Flip the last card in the old stack
+                if (m_lastStack)
+                {
+                    auto cards = m_lastStack->Cards();
+                    if (!cards.empty())
+                    {
+                        auto card = cards.back();
+                        card->IsFaceUp(true);
+                    }
+                }
+            }
+            else if (m_lastStack)
+            {
+                m_lastStack->Add(m_selectedCards);
+            }
+            else
+            {
+                WINRT_ASSERT(false);
+            }
+        }
+        m_selectedVisual = nullptr;
+        m_selectedCards.clear();
     }
 };
 

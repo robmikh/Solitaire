@@ -13,6 +13,10 @@ public:
     void ForceLayout(float verticalOffset);
 
     int HitTest(winrt::Windows::Foundation::Numerics::float2 point);
+    bool CanSplit(int index);
+    std::vector<std::shared_ptr<CompositionCard>> Split(int index);
+    bool CanAdd(std::shared_ptr<CompositionCard> const& card);
+    void Add(std::vector<std::shared_ptr<CompositionCard>> const& cards);
 
 private:
     std::vector<std::shared_ptr<CompositionCard>> m_stack;

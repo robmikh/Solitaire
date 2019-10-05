@@ -1,5 +1,10 @@
 #pragma once
 
+enum class ShapeType
+{
+    Back
+};
+
 class ShapeCache
 {
 public:
@@ -8,6 +13,7 @@ public:
 
     winrt::Windows::UI::Composition::Compositor Compositor() { return m_compositor; }
     winrt::Windows::UI::Composition::CompositionPathGeometry GetPathGeometry(winrt::hstring const& key);
+    winrt::Windows::UI::Composition::CompositionShape GetShape(ShapeType shapeType);
     float TextHeight() { return m_textHeight; }
 
 private:
@@ -20,5 +26,6 @@ private:
 private:
     winrt::Windows::UI::Composition::Compositor m_compositor;
     std::map<winrt::hstring, winrt::Windows::UI::Composition::CompositionPathGeometry> m_geometryCache;
+    std::map<ShapeType, winrt::Windows::UI::Composition::CompositionShape> m_shapeCache;
     float m_textHeight;
 };

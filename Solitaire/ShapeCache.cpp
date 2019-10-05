@@ -1,5 +1,7 @@
 ﻿#include "pch.h"
 #include "ShapeCache.h"
+#include "Card.h"
+#include "CompositionCard.h"
 
 #include <winrt/Microsoft.Graphics.Canvas.h>
 #include <winrt/Microsoft.Graphics.Canvas.Geometry.h>
@@ -32,6 +34,11 @@ CompositionPathGeometry ShapeCache::GetPathGeometry(
     hstring const& key)
 {
     return m_geometryCache.at(key);
+}
+
+CompositionShape ShapeCache::GetShape(ShapeType shapeType)
+{
+    return m_shapeCache.at(shapeType);
 }
 
 void ShapeCache::FillCache(
@@ -96,6 +103,34 @@ void ShapeCache::FillCache(
             height = textLayout.LayoutBounds().Height;
         }
         WINRT_ASSERT(height == textLayout.LayoutBounds().Height);
+    }
+
+    m_shapeCache.clear();
+    {
+        auto shapeContainer = compositor.CreateContainerShape();
+        auto backgroundBaseColor = Colors::Blue();
+
+        auto roundedRectGeometry = compositor.CreateRoundedRectangleGeometry();
+        roundedRectGeometry.CornerRadius({ 10, 10 });
+        roundedRectGeometry.Size(CompositionCard::CardSize);
+        auto rectShape = compositor.CreateSpriteShape(roundedRectGeometry);
+        rectShape.StrokeBrush(compositor.CreateColorBrush(Colors::Gray()));
+        rectShape.FillBrush(compositor.CreateColorBrush(backgroundBaseColor));
+        rectShape.StrokeThickness(2);
+        shapeContainer.Shapes().Append(rectShape);
+
+        float2 innerOffset{ 12, 12 };
+        auto innerRoundedRectGeometry = compositor.CreateRoundedRectangleGeometry();
+        innerRoundedRectGeometry.CornerRadius({ 6, 6 });
+        innerRoundedRectGeometry.Size(CompositionCard::CardSize - innerOffset);
+        auto innerRectShape = compositor.CreateSpriteShape(innerRoundedRectGeometry);
+        innerRectShape.StrokeBrush(compositor.CreateColorBrush(Colors::White()));
+        innerRectShape.FillBrush(compositor.CreateColorBrush(backgroundBaseColor));
+        innerRectShape.StrokeThickness(5);
+        innerRectShape.Offset(innerOffset / 2.0f);
+        shapeContainer.Shapes().Append(innerRectShape);
+
+        m_shapeCache.emplace(ShapeType::Back, shapeContainer);
     }
 
     m_compositor = compositor;

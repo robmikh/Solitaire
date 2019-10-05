@@ -5,6 +5,8 @@ class ShapeCache;
 class CompositionCard
 {
 public:
+    static const winrt::Windows::Foundation::Numerics::float2 CardSize;
+
     CompositionCard(
         Card card,
         std::shared_ptr<ShapeCache> const& shapeCache);

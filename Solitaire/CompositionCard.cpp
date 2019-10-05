@@ -12,7 +12,7 @@ using namespace Windows::UI;
 using namespace Windows::UI::Core;
 using namespace Windows::UI::Composition;
 
-const float2 CardSize = { 175, 250 };
+const float2 CompositionCard::CardSize = { 175, 250 };
 
 ShapeVisual BuildCardFront(
     std::shared_ptr<ShapeCache> const& shapeCache,
@@ -23,12 +23,12 @@ ShapeVisual BuildCardFront(
     auto shapeVisual = compositor.CreateShapeVisual();
     auto shapeContainer = compositor.CreateContainerShape();
     shapeVisual.Shapes().Append(shapeContainer);
-    shapeVisual.Size(CardSize);
+    shapeVisual.Size(CompositionCard::CardSize);
     shapeVisual.BackfaceVisibility(CompositionBackfaceVisibility::Hidden);
 
     auto roundedRectGeometry = compositor.CreateRoundedRectangleGeometry();
     roundedRectGeometry.CornerRadius({ 10, 10 });
-    roundedRectGeometry.Size(CardSize);
+    roundedRectGeometry.Size(CompositionCard::CardSize);
     auto rectShape = compositor.CreateSpriteShape(roundedRectGeometry);
     rectShape.StrokeBrush(compositor.CreateColorBrush(Colors::Gray()));
     rectShape.FillBrush(compositor.CreateColorBrush(Colors::White()));
@@ -44,35 +44,15 @@ ShapeVisual BuildCardFront(
     return shapeVisual;
 }
 
-ShapeVisual BuildCardBack(Compositor const& compositor, Color const& color)
+ShapeVisual BuildCardBack(std::shared_ptr<ShapeCache> const& shapeCache)
 {
+    auto compositor = shapeCache->Compositor();
     auto shapeVisual = compositor.CreateShapeVisual();
-    auto shapeContainer = compositor.CreateContainerShape();
-    shapeVisual.Shapes().Append(shapeContainer);
-    shapeVisual.Size(CardSize);
+    shapeVisual.Shapes().Append(shapeCache->GetShape(ShapeType::Back));
+    shapeVisual.Size(CompositionCard::CardSize);
     shapeVisual.BackfaceVisibility(CompositionBackfaceVisibility::Hidden);
     shapeVisual.RotationAxis({ 0, 1, 0 });
     shapeVisual.RotationAngleInDegrees(180);
-
-    auto roundedRectGeometry = compositor.CreateRoundedRectangleGeometry();
-    roundedRectGeometry.CornerRadius({ 10, 10 });
-    roundedRectGeometry.Size(CardSize);
-    auto rectShape = compositor.CreateSpriteShape(roundedRectGeometry);
-    rectShape.StrokeBrush(compositor.CreateColorBrush(Colors::Gray()));
-    rectShape.FillBrush(compositor.CreateColorBrush(color));
-    rectShape.StrokeThickness(2);
-    shapeContainer.Shapes().Append(rectShape);
-
-    float2 innerOffset{ 12, 12 };
-    auto innerRoundedRectGeometry = compositor.CreateRoundedRectangleGeometry();
-    innerRoundedRectGeometry.CornerRadius({ 6, 6 });
-    innerRoundedRectGeometry.Size({ CardSize.x - innerOffset.x, CardSize.y - innerOffset.y });
-    auto innerRectShape = compositor.CreateSpriteShape(innerRoundedRectGeometry);
-    innerRectShape.StrokeBrush(compositor.CreateColorBrush(Colors::White()));
-    innerRectShape.FillBrush(compositor.CreateColorBrush(color));
-    innerRectShape.StrokeThickness(5);
-    innerRectShape.Offset(innerOffset / 2.0f);
-    shapeContainer.Shapes().Append(innerRectShape);
 
     return shapeVisual;
 }
@@ -96,7 +76,7 @@ CompositionCard::CompositionCard(
         card.ToString(),
         card.IsRed() ? Colors::Crimson() : Colors::Black());
     m_sidesRoot.Children().InsertAtTop(m_front);
-    m_back = BuildCardBack(compositor, Colors::Blue());
+    m_back = BuildCardBack(shapeCache);
     m_sidesRoot.Children().InsertAtTop(m_back);
 
     m_chainedCards = compositor.CreateContainerVisual();

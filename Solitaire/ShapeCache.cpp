@@ -125,12 +125,36 @@ void ShapeCache::FillCache(
         innerRoundedRectGeometry.Size(CompositionCard::CardSize - innerOffset);
         auto innerRectShape = compositor.CreateSpriteShape(innerRoundedRectGeometry);
         innerRectShape.StrokeBrush(compositor.CreateColorBrush(Colors::White()));
-        innerRectShape.FillBrush(compositor.CreateColorBrush(backgroundBaseColor));
         innerRectShape.StrokeThickness(5);
         innerRectShape.Offset(innerOffset / 2.0f);
         shapeContainer.Shapes().Append(innerRectShape);
 
         m_shapeCache.emplace(ShapeType::Back, shapeContainer);
+    }
+
+    {
+        auto shapeContainer = compositor.CreateContainerShape();
+        auto backgroundBaseColor = Colors::Blue();
+
+        auto roundedRectGeometry = compositor.CreateRoundedRectangleGeometry();
+        roundedRectGeometry.CornerRadius({ 10, 10 });
+        roundedRectGeometry.Size(CompositionCard::CardSize);
+        auto rectShape = compositor.CreateSpriteShape(roundedRectGeometry);
+        rectShape.StrokeBrush(compositor.CreateColorBrush(Colors::Gray()));
+        rectShape.StrokeThickness(5);
+        shapeContainer.Shapes().Append(rectShape);
+
+        float2 innerSize{ CompositionCard::CardSize / 2.0f };
+        auto innerRoundedRectGeometry = compositor.CreateRoundedRectangleGeometry();
+        innerRoundedRectGeometry.CornerRadius({ 6, 6 });
+        innerRoundedRectGeometry.Size(innerSize);
+        auto innerRectShape = compositor.CreateSpriteShape(innerRoundedRectGeometry);
+        innerRectShape.FillBrush(compositor.CreateColorBrush(Colors::Gray()));
+        innerRectShape.StrokeThickness(5);
+        innerRectShape.Offset((CompositionCard::CardSize - innerSize) / 2.0f);
+        shapeContainer.Shapes().Append(innerRectShape);
+
+        m_shapeCache.emplace(ShapeType::Empty, shapeContainer);
     }
 
     m_compositor = compositor;

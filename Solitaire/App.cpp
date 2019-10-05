@@ -103,7 +103,7 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
             std::vector<std::shared_ptr<CompositionCard>> tempStack(start, start + numberOfCards);
             cardsSoFar += numberOfCards;
 
-            auto stack = std::make_shared<CardStack>(tempStack);
+            auto stack = std::make_shared<CardStack>(m_shapeCache, tempStack);
             stack->ForceLayout(textHeight);
             auto baseVisual = stack->Base();
 
@@ -208,29 +208,15 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
                     break;
                 case HitTestZone::PlayArea:
                 {
-                    auto textHeight = m_shapeCache->TextHeight();
                     for (auto& stack : m_stacks)
                     {
-                        const auto baseOffset = stack->Base().Offset();
-                        auto cards = stack->Cards();
-
-                        for (int i = cards.size() - 1; i > 0; i--)
+                        auto index = stack->HitTest(point);
+                        if (index >= 0)
                         {
-                            auto card = cards[i];
-
-                            auto accumulatedVerticalOffset = textHeight * (i - 1);
-                            float2 accumulatedOffset = { baseOffset.x, baseOffset.y + accumulatedVerticalOffset };
-
-                            if (card->HitTest(accumulatedOffset, point))
-                            {
-                                m_selected = stack->Base();
-                            }
-                        }
-
-                        if (!cards.empty() && cards.front()->HitTest({ 0, 0 }, point))
-                        {
+                            auto card = stack->Cards()[index];
                             m_selected = stack->Base();
                         }
+                        auto cards = stack->Cards();
 
                         if (m_selected)
                         {

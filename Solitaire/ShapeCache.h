@@ -2,7 +2,8 @@
 
 enum class ShapeType
 {
-    Back
+    Back,
+    Empty
 };
 
 class ShapeCache

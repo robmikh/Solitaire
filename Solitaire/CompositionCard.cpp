@@ -51,3 +51,22 @@ CompositionCard::CompositionCard(
         card.ToString(),
         card.IsRed() ? Colors::Crimson() : Colors::Black());
 }
+
+
+bool CompositionCard::HitTest(float2 accumulatedOffset, float2 point)
+{
+    auto offset = m_root.Offset();
+    offset.x += accumulatedOffset.x;
+    offset.y += accumulatedOffset.y;
+    float2 const size = m_root.Size();
+
+    if (point.x >= offset.x &&
+        point.x < offset.x + size.x &&
+        point.y >= offset.y &&
+        point.y < offset.y + size.y)
+    {
+        return true;
+    }
+
+    return false;
+}

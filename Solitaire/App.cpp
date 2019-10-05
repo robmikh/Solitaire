@@ -98,17 +98,33 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
     {
         float2 const point = args.CurrentPoint().Position();
 
-        for (Visual visual : m_visuals)
+        auto textHeight = m_shapeCache->TextHeight();
+        for (auto& stack : m_stacks)
         {
-            float3 const offset = visual.Offset();
-            float2 const size = visual.Size();
+            const auto baseOffset = stack->Base().Offset();
+            auto cards = stack->Cards();
 
-            if (point.x >= offset.x &&
-                point.x < offset.x + size.x &&
-                point.y >= offset.y &&
-                point.y < offset.y + size.y)
+            for (int i = cards.size() - 1; i > 0; i--)
             {
-                m_selected = visual;
+                auto card = cards[i];
+
+                auto accumulatedVerticalOffset = textHeight * (i - 1);
+                float2 accumulatedOffset = { baseOffset.x, baseOffset.y + accumulatedVerticalOffset };
+
+                if (card->HitTest(accumulatedOffset, point))
+                {
+                    m_selected = stack->Base();
+                }
+            }
+
+            if (!cards.empty() && cards.front()->HitTest({ 0, 0 }, point))
+            {
+                m_selected = stack->Base();
+            }
+
+            if (m_selected)
+            {
+                float3 const offset = m_selected.Offset();
                 m_offset.x = offset.x - point.x;
                 m_offset.y = offset.y - point.y;
             }

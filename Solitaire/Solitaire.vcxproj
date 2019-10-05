@@ -96,6 +96,7 @@
     <ClInclude Include="CardStack.h" />
     <ClInclude Include="CompositionCard.h" />
     <ClInclude Include="Deck.h" />
+    <ClInclude Include="Foundation.h" />
     <ClInclude Include="Pack.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="ShapeCache.h" />
@@ -117,6 +118,7 @@
     <ClCompile Include="App.cpp" />
     <ClCompile Include="CompositionCard.cpp" />
     <ClCompile Include="Deck.cpp" />
+    <ClCompile Include="Foundation.cpp" />
     <ClCompile Include="Pack.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>

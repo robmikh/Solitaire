@@ -72,6 +72,15 @@ int CardStack::HitTest(float2 point)
         }
     }
 
+    float2 const size = m_background.Size();
+    if (point.x >= 0 &&
+        point.x < size.x &&
+        point.y >= 0 &&
+        point.y < size.y)
+    {
+        return -2;
+    }
+
     return -1;
 }
 

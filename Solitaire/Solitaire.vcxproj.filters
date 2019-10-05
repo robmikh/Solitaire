@@ -8,6 +8,7 @@
     <ClCompile Include="CardStack.cpp" />
     <ClCompile Include="CompositionCard.cpp" />
     <ClCompile Include="Waste.cpp" />
+    <ClCompile Include="Deck.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
@@ -17,6 +18,7 @@
     <ClInclude Include="CardStack.h" />
     <ClInclude Include="CompositionCard.h" />
     <ClInclude Include="Waste.h" />
+    <ClInclude Include="Deck.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="Assets\Logo.scale-100.png">

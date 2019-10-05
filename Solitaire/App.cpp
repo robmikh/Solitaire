@@ -5,6 +5,7 @@
 #include "Pack.h"
 #include "CardStack.h"
 #include "Waste.h"
+#include "Deck.h"
 
 using namespace winrt;
 
@@ -42,7 +43,7 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
     std::unique_ptr<Pack> m_pack;
     std::vector<std::shared_ptr<CardStack>> m_stacks;
     std::map<HitTestZone, Rect> m_zoneRects;
-    std::vector<std::shared_ptr<CompositionCard>> m_deck;
+    std::unique_ptr<Deck> m_deck;
     std::unique_ptr<Waste> m_waste;
 
     IFrameworkView CreateView()
@@ -128,14 +129,9 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
         m_zoneRects.insert({ HitTestZone::PlayArea, { 0, playAreaOffsetY, window.Bounds().Width, window.Bounds().Height - playAreaOffsetY } });
 
         std::vector<std::shared_ptr<CompositionCard>> deck(cards.begin() + cardsSoFar, cards.end());
-        m_deck = deck;
-        for (auto& card : deck)
-        {
-            auto visual = card->Root();
-            visual.Offset({ 0, 0, 0 });
-            m_visuals.InsertAtTop(visual);
-            card->IsFaceUp(false);
-        }
+        m_deck = std::make_unique<Deck>(m_shapeCache, deck);
+        m_deck->ForceLayout();
+        m_visuals.InsertAtTop(m_deck->Base());
         m_zoneRects.insert({ HitTestZone::Deck, { 0, 0, cardSize.x, cardSize.y } });
 
         m_waste = std::make_unique<Waste>(m_shapeCache);
@@ -168,44 +164,19 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
                 {
                 case HitTestZone::Deck:
                 {
-                    // Take the top 3 cards
-                    auto availableCards = 3;
-                    if (m_deck.size() < 3)
+                    if (m_deck->HitTest(point))
                     {
-                        availableCards = m_deck.size();
-                    }
+                        auto cards = m_deck->Draw();
 
-                    if (availableCards > 0)
-                    {
-                        auto start = m_deck.begin() + (m_deck.size() - availableCards);
-                        auto end = m_deck.end();
-                        std::vector<std::shared_ptr<CompositionCard>> tempCards(
-                            std::make_move_iterator(start),
-                            std::make_move_iterator(end));
-                        m_deck.erase(start, end);
-
-                        std::vector<std::shared_ptr<CompositionCard>> cards(tempCards.rbegin(), tempCards.rend());
-                        for (auto& card : cards)
+                        if (!cards.empty())
                         {
-                            auto visual = card->Root();
-                            m_visuals.Remove(visual);
-                            card->IsFaceUp(true);
+                            m_waste->AddCards(cards);
+                            m_waste->ForceLayout(65.0f);
                         }
-                        m_waste->AddCards(cards);
-                        m_waste->ForceLayout(65.0f);
-                    }
-                    else
-                    {
-                        auto cards = m_waste->Flush();
-                        for (auto& card : cards)
+                        else
                         {
-                            auto visual = card->Root();
-                            visual.Offset({ 0, 0, 0 });
-                            visual.Parent().Children().Remove(visual);
-                            m_visuals.InsertAtTop(visual);
-                            card->IsFaceUp(false);
-
-                            m_deck.push_back(card);
+                            auto wasteCards = m_waste->Flush();
+                            m_deck->AddCards(wasteCards);
                         }
                     }
                 }
@@ -304,7 +275,7 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
             for (auto& stack : m_stacks)
             {
                 auto index = stack->HitTest(point);
-                if (index >= 0)
+                if (index >= 0 || index == -2)
                 {
                     foundStack = stack;
                     break;

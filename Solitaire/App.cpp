@@ -164,6 +164,7 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
         window.PointerPressed({ this, &App::OnPointerPressed });
         window.PointerMoved({ this, &App::OnPointerMoved });
         window.PointerReleased({ this, &App::OnPointerReleased });
+        window.SizeChanged({ this, &App::OnSizeChanged });
     }
 
     void OnPointerPressed(IInspectable const &, PointerEventArgs const & args)
@@ -409,6 +410,11 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
         m_lastStack = nullptr;
         m_isSelectedWasteCard = false;
         m_lastWasteIndex = -1;
+    }
+
+    void App::OnSizeChanged(CoreWindow const& window, WindowSizeChangedEventArgs const& args)
+    {
+        m_zoneRects[HitTestZone::Foundations] = { window.Bounds().Width - m_foundationVisual.Size().x, 0, m_foundationVisual.Size().x, m_foundationVisual.Size().y };
     }
 };
 

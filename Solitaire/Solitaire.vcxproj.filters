@@ -5,12 +5,16 @@
     <ClCompile Include="pch.cpp" />
     <ClCompile Include="ShapeCache.cpp" />
     <ClCompile Include="Pack.cpp" />
+    <ClCompile Include="CardStack.cpp" />
+    <ClCompile Include="CompositionCard.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
     <ClInclude Include="ShapeCache.h" />
     <ClInclude Include="Pack.h" />
     <ClInclude Include="Card.h" />
+    <ClInclude Include="CardStack.h" />
+    <ClInclude Include="CompositionCard.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="Assets\Logo.scale-100.png">
@@ -43,8 +47,5 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="PropertySheet.props" />
-  </ItemGroup>
-  <ItemGroup>
-    <Text Include="readme.txt" />
   </ItemGroup>
 </Project>

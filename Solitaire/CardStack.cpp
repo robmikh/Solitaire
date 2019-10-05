@@ -16,24 +16,24 @@ void CardStack::ForceLayout(float verticalOffset)
     }
 
     // The first element is the "base" of the stack
-    auto parentVisual = m_stack.front()->Root();
+    auto parent = m_stack.front();
 
     for (auto& card : m_stack)
     {
-        auto cardVisual = card->Root();
-
-        if (parentVisual == cardVisual)
+        if (parent == card)
         {
             continue;
         }
 
-        if (cardVisual.Parent() && cardVisual.Parent() != parentVisual)
+        auto cardVisual = card->Root();
+
+        if (cardVisual.Parent())
         {
             cardVisual.Parent().Children().Remove(cardVisual);
         }
 
         cardVisual.Offset({ 0, verticalOffset, 0 });
-        parentVisual.Children().InsertAtTop(cardVisual);
-        parentVisual = cardVisual;
+        parent->ChainCard(*card.get());
+        parent = card;
     }
 }

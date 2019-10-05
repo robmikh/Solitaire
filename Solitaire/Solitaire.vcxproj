@@ -98,6 +98,7 @@
     <ClInclude Include="Pack.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="ShapeCache.h" />
+    <ClInclude Include="Waste.h" />
   </ItemGroup>
   <ItemGroup>
     <AppxManifest Include="Package.appxmanifest">
@@ -120,6 +121,7 @@
     </ClCompile>
     <ClCompile Include="ShapeCache.cpp" />
     <ClCompile Include="CardStack.cpp" />
+    <ClCompile Include="Waste.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

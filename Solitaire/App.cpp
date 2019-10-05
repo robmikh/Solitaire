@@ -34,6 +34,8 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
     Visual m_selectedVisual{ nullptr };
     std::vector<std::shared_ptr<CompositionCard>> m_selectedCards;
     std::shared_ptr<CardStack> m_lastStack;
+    bool m_isSelectedWasteCard = false;
+    int m_lastWasteIndex = -1;
     float2 m_offset{};
 
     std::shared_ptr<ShapeCache> m_shapeCache;
@@ -136,8 +138,12 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
         }
         m_zoneRects.insert({ HitTestZone::Deck, { 0, 0, cardSize.x, cardSize.y } });
 
-        m_waste = std::make_unique<Waste>();
-        m_zoneRects.insert({ HitTestZone::Waste, { cardSize.x + 25.0f, 0, cardSize.x, cardSize.y } });
+        m_waste = std::make_unique<Waste>(m_shapeCache);
+        m_waste->ForceLayout(65.0f);
+        auto wasteVisual = m_waste->Base();
+        wasteVisual.Offset({ cardSize.x + 25.0f, 0, 0 });
+        m_visuals.InsertAtTop(wasteVisual);
+        m_zoneRects.insert({ HitTestZone::Waste, { cardSize.x + 25.0f, 0, (2.0f * 65.0f) + cardSize.x, cardSize.y } });
 
         window.PointerPressed({ this, &App::OnPointerPressed });
         window.PointerMoved({ this, &App::OnPointerMoved });
@@ -179,14 +185,14 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
                         m_deck.erase(start, end);
 
                         std::vector<std::shared_ptr<CompositionCard>> cards(tempCards.rbegin(), tempCards.rend());
-                        m_waste->AddCards(cards);
                         for (auto& card : cards)
                         {
                             auto visual = card->Root();
                             m_visuals.Remove(visual);
-                            m_visuals.InsertAtTop(visual);
                             card->IsFaceUp(true);
                         }
+                        m_waste->AddCards(cards);
+                        m_waste->ForceLayout(65.0f);
                     }
                     else
                     {
@@ -195,7 +201,7 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
                         {
                             auto visual = card->Root();
                             visual.Offset({ 0, 0, 0 });
-                            m_visuals.Remove(visual);
+                            visual.Parent().Children().Remove(visual);
                             m_visuals.InsertAtTop(visual);
                             card->IsFaceUp(false);
 
@@ -236,6 +242,28 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
                     }
                 }
                     break;
+                case HitTestZone::Waste:
+                {
+                    auto index = m_waste->HitTest(point);
+                    if (index >= 0)
+                    {
+                        auto card = m_waste->Pick(index);
+                        m_selectedVisual = card->Root();
+                        m_selectedCards = { card };
+                        m_lastStack = nullptr;
+                        m_isSelectedWasteCard = true;
+                        m_lastWasteIndex = index;
+                    }
+
+                    if (m_selectedVisual)
+                    {
+                        float3 const offset = m_selectedVisual.Offset();
+                        m_offset.x = offset.x - point.x;
+                        m_offset.y = offset.y - point.y;
+                        break;
+                    }
+                }
+                    break;
                 default:
                     continue;
                 }
@@ -246,7 +274,6 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
 
         if (m_selectedVisual)
         {
-            //m_visuals.Remove(m_selectedVisual);
             m_selectedLayer.Children().InsertAtTop(m_selectedVisual);
         }
     }
@@ -298,10 +325,22 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
                         card->IsFaceUp(true);
                     }
                 }
+
+                // Remove the card from the waste pile
+                if (m_isSelectedWasteCard)
+                {
+                    m_waste->RemoveCard(m_selectedCards.front());
+                    m_waste->ForceLayout(65.0f);
+                }
             }
             else if (m_lastStack)
             {
                 m_lastStack->Add(m_selectedCards);
+            }
+            else if (m_isSelectedWasteCard)
+            {
+                m_waste->InsertCard(m_selectedCards.front(), m_lastWasteIndex);
+                m_waste->ForceLayout(65.0f);
             }
             else
             {
@@ -310,6 +349,9 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
         }
         m_selectedVisual = nullptr;
         m_selectedCards.clear();
+        m_lastStack = nullptr;
+        m_isSelectedWasteCard = false;
+        m_lastWasteIndex = -1;
     }
 };
 

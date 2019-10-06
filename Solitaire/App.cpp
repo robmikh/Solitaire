@@ -31,6 +31,10 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
     CompositionTarget m_target{ nullptr };
     ContainerVisual m_root{ nullptr };
     ContainerVisual m_boardLayer{ nullptr };
+    ContainerVisual m_foundationVisual{ nullptr };
+    ContainerVisual m_deckVisual{ nullptr };
+    ContainerVisual m_wasteVisual{ nullptr };
+    ContainerVisual m_playAreaVisual{ nullptr };
     ContainerVisual m_selectedLayer{ nullptr };
     VisualCollection m_visuals{ nullptr };
     Visual m_selectedVisual{ nullptr };
@@ -39,7 +43,6 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
     bool m_isSelectedWasteCard = false;
     int m_lastWasteIndex = -1;
     float2 m_offset{};
-    ContainerVisual m_foundationVisual{ nullptr };
     std::shared_ptr<::Foundation> m_lastFoundation;
 
     std::shared_ptr<ShapeCache> m_shapeCache;
@@ -114,7 +117,8 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
             cardsSoFar += numberOfCards;
 
             auto stack = std::make_shared<CardStack>(m_shapeCache, tempStack);
-            stack->ForceLayout(textHeight);
+            stack->SetLayoutOptions(textHeight);
+            stack->ForceLayout();
             auto baseVisual = stack->Base();
 
             baseVisual.Offset({ (float)i * (cardSize.x + 15.0f), playAreaOffsetY, 0 });
@@ -204,23 +208,22 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
                     break;
                 case HitTestZone::PlayArea:
                 {
+                    auto playAreaPoint = point;
+                    auto playAreaHitTestRect = m_zoneRects[HitTestZone::PlayArea];
+                    playAreaPoint.x -= playAreaHitTestRect.X;
+                    playAreaPoint.y -= playAreaHitTestRect.Y;
                     for (auto& stack : m_stacks)
                     {
-                        auto index = stack->HitTest(point);
-                        if (stack->CanSplit(index))
+                        auto temp = playAreaPoint;
+                        temp.x -= stack->Base().Offset().x;
+                        //temp.y -= stack->Base().Offset().y;
+                        auto result = stack->HitTest(temp);
+                        if (result.Target == Pile::HitTestTarget::Card &&
+                            stack->CanSplit(result.CardIndex))
                         {
                             m_lastStack = stack;
-                            m_selectedCards = stack->Split(index);
+                            m_selectedCards = stack->Split(result.CardIndex);
                             m_selectedVisual = m_selectedCards.front()->Root();
-
-                            float3 accumulatedOffset = stack->Base().Offset();
-                            if (index > 0)
-                            {
-                                auto textHeight = m_shapeCache->TextHeight();
-                                accumulatedOffset.y += textHeight * index;
-                            }
-
-                            m_selectedVisual.Offset(accumulatedOffset);
                         }
                         auto cards = stack->Cards();
 
@@ -264,11 +267,17 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
                     foundationPoint.y -= foundationHitTestRect.Y;
                     for (auto& foundation : m_foundations)
                     {
-                        if (foundation->HitTest(foundationPoint))
+                        auto temp = foundationPoint;
+                        temp.x -= foundation->Base().Offset().x;
+                        temp.y -= foundation->Base().Offset().y;
+                        auto result = foundation->HitTest(temp);
+                        if (result.Target == Pile::HitTestTarget::Card)
                         {
-                            if (foundation->CanTake())
+                            if (foundation->CanSplit(result.CardIndex))
                             {
-                                auto card = foundation->Take();
+                                auto cards = foundation->Split(result.CardIndex);
+                                WINRT_ASSERT(cards.size() == 1);
+                                auto card = cards.front();
                                 m_selectedVisual = card->Root();
                                 auto offset = m_selectedVisual.Offset();
                                 offset.x += foundationHitTestRect.X;
@@ -330,10 +339,18 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
             m_selectedLayer.Children().RemoveAll();
 
             std::shared_ptr<CardStack> foundStack;
+            auto playAreaPoint = point;
+            auto playAreaHitTestRect = m_zoneRects[HitTestZone::PlayArea];
+            playAreaPoint.x -= playAreaHitTestRect.X;
+            playAreaPoint.y -= playAreaHitTestRect.Y;
             for (auto& stack : m_stacks)
             {
-                auto index = stack->HitTest(point);
-                if (index >= 0 || index == -2)
+                auto temp = playAreaPoint;
+                temp.x -= stack->Base().Offset().x;
+                //temp.y -= stack->Base().Offset().y;
+                auto result = stack->HitTest(temp);
+                if (result.Target == Pile::HitTestTarget::Card || 
+                    result.Target == Pile::HitTestTarget::Base)
                 {
                     foundStack = stack;
                     break;
@@ -347,15 +364,20 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
             foundationPoint.y -= foundationHitTestRect.Y;
             for (auto& foundation : m_foundations)
             {
-                if (foundation->HitTest(foundationPoint))
+                auto temp = foundationPoint;
+                temp.x -= foundation->Base().Offset().x;
+                temp.y -= foundation->Base().Offset().y;
+                auto result = foundation->HitTest(temp);
+                if (result.Target == Pile::HitTestTarget::Card ||
+                    result.Target == Pile::HitTestTarget::Base)
                 {
                     foundFoundation = foundation;
                     break;
                 }
             }
 
-            auto shouldBeInStack = foundStack && foundStack->CanAdd(m_selectedCards.front());
-            auto shouldBeInFoundation = foundFoundation && foundFoundation->CanAdd(m_selectedCards.front());
+            auto shouldBeInStack = foundStack && foundStack->CanAdd(m_selectedCards);
+            auto shouldBeInFoundation = foundFoundation && foundFoundation->CanAdd(m_selectedCards);
 
             if (shouldBeInStack || shouldBeInFoundation)
             {
@@ -365,7 +387,7 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
                 }
                 else
                 {
-                    foundFoundation->Add(m_selectedCards.front());
+                    foundFoundation->Add(m_selectedCards);
                 }
 
                 // Flip the last card in the old stack
@@ -397,7 +419,7 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
             }
             else if (m_lastFoundation)
             {
-                m_lastFoundation->Add(m_selectedCards.front());
+                m_lastFoundation->Add(m_selectedCards);
                 m_lastFoundation->ForceLayout();
             }
             else

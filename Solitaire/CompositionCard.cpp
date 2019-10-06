@@ -84,11 +84,9 @@ CompositionCard::CompositionCard(
     m_root.Children().InsertAtTop(m_chainedCards);
 }
 
-bool CompositionCard::HitTest(float2 accumulatedOffset, float2 point)
+bool CompositionCard::HitTest(float2 point)
 {
-    auto offset = m_root.Offset();
-    offset.x += accumulatedOffset.x;
-    offset.y += accumulatedOffset.y;
+    float3 const offset = m_root.Offset();
     float2 const size = m_root.Size();
 
     if (point.x >= offset.x &&
@@ -100,11 +98,6 @@ bool CompositionCard::HitTest(float2 accumulatedOffset, float2 point)
     }
 
     return false;
-}
-
-void CompositionCard::ChainCard(CompositionCard const& card)
-{
-    m_chainedCards.Children().InsertAtTop(card.m_root);
 }
 
 void CompositionCard::IsFaceUp(bool isFaceUp)

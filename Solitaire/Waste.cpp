@@ -29,7 +29,10 @@ int Waste::HitTest(winrt::Windows::Foundation::Numerics::float2 point)
     for (auto it = m_cards.rbegin(); it != m_cards.rend(); ++it)
     {
         auto card = *it;
-        if (card->HitTest({ offset.x, offset.y }, point))
+        auto temp = point;
+        temp.x -= offset.x;
+        temp.y -= offset.y;
+        if (card->HitTest(temp))
         {
             return index;
         }

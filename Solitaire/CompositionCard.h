@@ -16,13 +16,11 @@ public:
     winrt::Windows::UI::Composition::Visual Root() { return m_root; }
     bool IsFaceUp() { return m_isFaceUp; }
 
-    bool HitTest(
-        winrt::Windows::Foundation::Numerics::float2 accumulatedOffset, 
-        winrt::Windows::Foundation::Numerics::float2 point);
-    void ChainCard(CompositionCard const& card);
-    void ClearChain() { m_chainedCards.Children().RemoveAll(); }
+    bool HitTest(winrt::Windows::Foundation::Numerics::float2 point);
     void IsFaceUp(bool isFaceUp);
     void Flip() { IsFaceUp(!m_isFaceUp); }
+
+    winrt::Windows::UI::Composition::VisualCollection Children() { return m_chainedCards.Children(); }
 
 private:
     winrt::Windows::UI::Composition::ContainerVisual m_root{ nullptr };

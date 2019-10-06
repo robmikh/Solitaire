@@ -99,6 +99,7 @@
     <ClInclude Include="Foundation.h" />
     <ClInclude Include="Pack.h" />
     <ClInclude Include="pch.h" />
+    <ClInclude Include="Pile.h" />
     <ClInclude Include="ShapeCache.h" />
     <ClInclude Include="Waste.h" />
   </ItemGroup>
@@ -123,6 +124,7 @@
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="Pile.cpp" />
     <ClCompile Include="ShapeCache.cpp" />
     <ClCompile Include="CardStack.cpp" />
     <ClCompile Include="Waste.cpp" />

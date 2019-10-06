@@ -420,66 +420,12 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
             float2 const point = args.CurrentPoint().Position();
             m_selectedLayer.Children().RemoveAll();
 
-            std::shared_ptr<CardStack> foundStack;
-            auto playAreaPoint = point;
-            auto playAreaHitTestRect = m_zoneRects[HitTestZone::PlayArea];
-            playAreaPoint.x -= playAreaHitTestRect.X;
-            playAreaPoint.y -= playAreaHitTestRect.Y;
-            for (auto& stack : m_stacks)
-            {
-                auto temp = playAreaPoint;
-                temp.x -= stack->Base().Offset().x;
-                temp.y -= stack->Base().Offset().y;
-                auto result = stack->HitTest(temp);
-                if (result.Target == Pile::HitTestTarget::Card || 
-                    result.Target == Pile::HitTestTarget::Base)
-                {
-                    foundStack = stack;
-                    break;
-                }
-            }
-
-            std::shared_ptr<::Foundation> foundFoundation;
-            auto foundationPoint = point;
-            auto foundationHitTestRect = m_zoneRects[HitTestZone::Foundations];
-            foundationPoint.x -= foundationHitTestRect.X;
-            foundationPoint.y -= foundationHitTestRect.Y;
-            for (auto& foundation : m_foundations)
-            {
-                auto temp = foundationPoint;
-                temp.x -= foundation->Base().Offset().x;
-                temp.y -= foundation->Base().Offset().y;
-                auto result = foundation->HitTest(temp);
-                if (result.Target == Pile::HitTestTarget::Card ||
-                    result.Target == Pile::HitTestTarget::Base)
-                {
-                    foundFoundation = foundation;
-                    break;
-                }
-            }
-
-            auto shouldBeInStack = foundStack && foundStack->CanAdd(m_selectedCards);
-            auto shouldBeInFoundation = foundFoundation && foundFoundation->CanAdd(m_selectedCards);
-
             auto [foundPile, hitTestResult, hitTestZone] = HitTestPiles(point, { Pile::HitTestTarget::Card, Pile::HitTestTarget::Base });
             auto shouldBeInPile = foundPile && foundPile->CanAdd(m_selectedCards);
 
-            auto tempShouldBeInPile = shouldBeInStack || shouldBeInFoundation;
-            WINRT_ASSERT(shouldBeInPile == tempShouldBeInPile);
-            std::shared_ptr<Pile> tempFoundPile;
-            if (shouldBeInStack)
+            if (shouldBeInPile)
             {
-                tempFoundPile = foundStack;
-            }
-            else
-            {
-                tempFoundPile = foundFoundation;
-            }
-            WINRT_ASSERT((shouldBeInPile ? foundPile.get() : nullptr) == tempFoundPile.get());
-
-            if (tempShouldBeInPile)
-            {
-                tempFoundPile->Add(m_selectedCards);
+                foundPile->Add(m_selectedCards);
 
                 // Flip the last card in the old pile
                 // TODO: This was originaly only run for card stacks, find

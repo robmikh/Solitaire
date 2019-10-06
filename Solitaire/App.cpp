@@ -460,6 +460,8 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
 
     void App::OnSizeChanged(CoreWindow const& window, WindowSizeChangedEventArgs const& args)
     {
+        auto playAreaOffsetY = m_playAreaVisual.Offset().y;
+        m_zoneRects.insert({ HitTestZone::PlayArea, { 0, playAreaOffsetY, window.Bounds().Width, window.Bounds().Height - playAreaOffsetY } });
         m_zoneRects[HitTestZone::Foundations] = { window.Bounds().Width - m_foundationVisual.Size().x, 0, m_foundationVisual.Size().x, m_foundationVisual.Size().y };
     }
 };

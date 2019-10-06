@@ -220,46 +220,24 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
                 }
                     break;
                 case HitTestZone::PlayArea:
-                //case HitTestZone::Foundations:
+                case HitTestZone::Foundations:
                 {
-                    // The point is in window space
-                    // Convert from window space to container space (Play Area, Foundation, etc)
-                    auto containerPoint = point;
                     auto containerHitTestRect = m_zoneRects[zoneType];
-                    containerPoint.x -= containerHitTestRect.X;
-                    containerPoint.y -= containerHitTestRect.Y;
-                    for (auto& stack : m_stacks)
+                    auto [foundPile, hitTestResult, hitTestZone] = HitTestPiles(point, { Pile::HitTestTarget::Card });
+                    if (foundPile && foundPile->CanSplit(hitTestResult.CardIndex))
                     {
-                        // The point is in container space
-                        // Convert from container space to local space for the pile
-                        auto localPoint = containerPoint;
-                        localPoint.x -= stack->Base().Offset().x;
-                        localPoint.y -= stack->Base().Offset().y;
-                        auto result = stack->HitTest(localPoint);
-                        if (result.Target == Pile::HitTestTarget::Card &&
-                            stack->CanSplit(result.CardIndex))
-                        {
-                            m_lastPile = stack;
-                            m_selectedCards = stack->Split(result.CardIndex);
-                            // The first visual in the list will have its offset updated by 
-                            // the pile. However, the pile only knows about its own transforms,
-                            // not the container's. Update the offset so the visual shows up
-                            // properly when added to the selection layer.
-                            m_selectedVisual = m_selectedCards.front()->Root();
-                            auto offset = m_selectedVisual.Offset();
-                            offset.x += containerHitTestRect.X;
-                            offset.y += containerHitTestRect.Y;
-                            m_selectedVisual.Offset(offset);
-                        }
-                        auto cards = stack->Cards();
-
-                        if (m_selectedVisual)
-                        {
-                            float3 const offset = m_selectedVisual.Offset();
-                            m_offset.x = offset.x - point.x;
-                            m_offset.y = offset.y - point.y;
-                            break;
-                        }
+                        m_lastPile = foundPile;
+                        m_selectedCards = foundPile->Split(hitTestResult.CardIndex);
+                        // The first visual in the list will have its offset updated by 
+                        // the pile. However, the pile only knows about its own transforms,
+                        // not the container's. Update the offset so the visual shows up
+                        // properly when added to the selection layer.
+                        m_selectedVisual = m_selectedCards.front()->Root();
+                        auto offset = m_selectedVisual.Offset();
+                        offset.x += containerHitTestRect.X;
+                        offset.y += containerHitTestRect.Y;
+                        m_selectedVisual.Offset(offset);
+                        m_isSelectedWasteCard = false;
                     }
                 }
                     break;
@@ -275,56 +253,6 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
                         m_isSelectedWasteCard = true;
                         m_lastWasteIndex = index;
                     }
-
-                    if (m_selectedVisual)
-                    {
-                        float3 const offset = m_selectedVisual.Offset();
-                        m_offset.x = offset.x - point.x;
-                        m_offset.y = offset.y - point.y;
-                        break;
-                    }
-                }
-                    break;
-                case HitTestZone::Foundations:
-                {
-                    auto foundationPoint = point;
-                    auto foundationHitTestRect = m_zoneRects[HitTestZone::Foundations];
-                    foundationPoint.x -= foundationHitTestRect.X;
-                    foundationPoint.y -= foundationHitTestRect.Y;
-                    for (auto& foundation : m_foundations)
-                    {
-                        auto temp = foundationPoint;
-                        temp.x -= foundation->Base().Offset().x;
-                        temp.y -= foundation->Base().Offset().y;
-                        auto result = foundation->HitTest(temp);
-                        if (result.Target == Pile::HitTestTarget::Card)
-                        {
-                            if (foundation->CanSplit(result.CardIndex))
-                            {
-                                auto cards = foundation->Split(result.CardIndex);
-                                WINRT_ASSERT(cards.size() == 1);
-                                auto card = cards.front();
-                                m_selectedVisual = card->Root();
-                                auto offset = m_selectedVisual.Offset();
-                                offset.x += foundationHitTestRect.X;
-                                offset.y += foundationHitTestRect.Y;
-                                m_selectedVisual.Offset(offset);
-                                m_selectedCards = { card };
-                                m_lastPile = foundation;
-                                m_isSelectedWasteCard = false;
-                            }
-
-                            break;
-                        }
-                    }
-
-                    if (m_selectedVisual)
-                    {
-                        float3 const offset = m_selectedVisual.Offset();
-                        m_offset.x = offset.x - point.x;
-                        m_offset.y = offset.y - point.y;
-                        break;
-                    }
                 }
                     break;
                 default:
@@ -338,6 +266,9 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
         if (m_selectedVisual)
         {
             m_selectedLayer.Children().InsertAtTop(m_selectedVisual);
+            float3 const offset = m_selectedVisual.Offset();
+            m_offset.x = offset.x - point.x;
+            m_offset.y = offset.y - point.y;
         }
     }
 

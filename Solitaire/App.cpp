@@ -82,6 +82,7 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
     void SetWindow(CoreWindow const & window)
     {
         Compositor compositor;
+        // Base visual tree
         m_shapeCache = std::make_shared<ShapeCache>(compositor);
         m_root = compositor.CreateContainerVisual();
         m_root.RelativeSizeAdjustment({ 1, 1 });
@@ -98,14 +99,22 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
 
         m_visuals = m_boardLayer.Children();
 
+        // Init cards
         m_pack = std::make_unique<Pack>(m_shapeCache);
         m_pack->Shuffle();
         auto cards = m_pack->Cards();
         auto textHeight = m_shapeCache->TextHeight();
 
-        const auto cardSize = cards.front()->Root().Size();
+        const auto cardSize = CompositionCard::CardSize;
 
+        // Play Area
         auto playAreaOffsetY = cardSize.y + 25.0f;
+        m_playAreaVisual = compositor.CreateContainerVisual();
+        m_playAreaVisual.Offset({ 0, playAreaOffsetY, 0 });
+        m_playAreaVisual.Size({ 0, -playAreaOffsetY });
+        m_playAreaVisual.RelativeSizeAdjustment({ 1, 1 });
+        m_visuals.InsertAtTop(m_playAreaVisual);
+        auto playAreaVisuals = m_playAreaVisual.Children();
         auto cardsSoFar = 0;
         auto numberOfStacks = 7;
         for (int i = 0; i < numberOfStacks; i++)
@@ -121,8 +130,8 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
             stack->ForceLayout();
             auto baseVisual = stack->Base();
 
-            baseVisual.Offset({ (float)i * (cardSize.x + 15.0f), playAreaOffsetY, 0 });
-            m_visuals.InsertAtTop(baseVisual);
+            baseVisual.Offset({ (float)i * (cardSize.x + 15.0f), 0, 0 });
+            playAreaVisuals.InsertAtTop(baseVisual);
 
             m_stacks.push_back(stack);
         }
@@ -137,12 +146,14 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
         }
         m_zoneRects.insert({ HitTestZone::PlayArea, { 0, playAreaOffsetY, window.Bounds().Width, window.Bounds().Height - playAreaOffsetY } });
 
+        // Deck
         std::vector<std::shared_ptr<CompositionCard>> deck(cards.begin() + cardsSoFar, cards.end());
         m_deck = std::make_unique<Deck>(m_shapeCache, deck);
         m_deck->ForceLayout();
         m_visuals.InsertAtTop(m_deck->Base());
         m_zoneRects.insert({ HitTestZone::Deck, { 0, 0, cardSize.x, cardSize.y } });
 
+        // Waste
         m_waste = std::make_unique<Waste>(m_shapeCache);
         m_waste->ForceLayout(65.0f);
         auto wasteVisual = m_waste->Base();
@@ -150,6 +161,7 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
         m_visuals.InsertAtTop(wasteVisual);
         m_zoneRects.insert({ HitTestZone::Waste, { cardSize.x + 25.0f, 0, (2.0f * 65.0f) + cardSize.x, cardSize.y } });
 
+        // Foundation
         m_foundationVisual = compositor.CreateContainerVisual();
         m_foundationVisual.Size({ 4.0f * cardSize.x + 3.0f * 15.0f, cardSize.y });
         m_foundationVisual.AnchorPoint({ 1, 0 });
@@ -208,22 +220,34 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
                     break;
                 case HitTestZone::PlayArea:
                 {
+                    // The point is in window space
+                    // Convert from window space to play area space
                     auto playAreaPoint = point;
                     auto playAreaHitTestRect = m_zoneRects[HitTestZone::PlayArea];
                     playAreaPoint.x -= playAreaHitTestRect.X;
                     playAreaPoint.y -= playAreaHitTestRect.Y;
                     for (auto& stack : m_stacks)
                     {
-                        auto temp = playAreaPoint;
-                        temp.x -= stack->Base().Offset().x;
-                        //temp.y -= stack->Base().Offset().y;
-                        auto result = stack->HitTest(temp);
+                        // The point is in play area space
+                        // Convert from play area space to local space for the pile
+                        auto localPoint = playAreaPoint;
+                        localPoint.x -= stack->Base().Offset().x;
+                        localPoint.y -= stack->Base().Offset().y;
+                        auto result = stack->HitTest(localPoint);
                         if (result.Target == Pile::HitTestTarget::Card &&
                             stack->CanSplit(result.CardIndex))
                         {
                             m_lastStack = stack;
                             m_selectedCards = stack->Split(result.CardIndex);
+                            // The first visual in the list will have its offset updated by 
+                            // the pile. However, the pile only knows about its own transforms,
+                            // not the play area's. Update the offset so the visual shows up
+                            // properly when added to the selection layer.
                             m_selectedVisual = m_selectedCards.front()->Root();
+                            auto offset = m_selectedVisual.Offset();
+                            offset.x += playAreaHitTestRect.X;
+                            offset.y += playAreaHitTestRect.Y;
+                            m_selectedVisual.Offset(offset);
                         }
                         auto cards = stack->Cards();
 
@@ -347,7 +371,7 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
             {
                 auto temp = playAreaPoint;
                 temp.x -= stack->Base().Offset().x;
-                //temp.y -= stack->Base().Offset().y;
+                temp.y -= stack->Base().Offset().y;
                 auto result = stack->HitTest(temp);
                 if (result.Target == Pile::HitTestTarget::Card || 
                     result.Target == Pile::HitTestTarget::Base)

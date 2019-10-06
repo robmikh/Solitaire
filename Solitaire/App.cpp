@@ -20,6 +20,7 @@ using namespace Windows::UI::Composition;
 
 enum class HitTestZone
 {
+    None,
     Deck,
     Waste,
     Foundations,
@@ -37,13 +38,13 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
     ContainerVisual m_playAreaVisual{ nullptr };
     ContainerVisual m_selectedLayer{ nullptr };
     VisualCollection m_visuals{ nullptr };
+
     Visual m_selectedVisual{ nullptr };
     std::vector<std::shared_ptr<CompositionCard>> m_selectedCards;
-    std::shared_ptr<CardStack> m_lastStack;
+    std::shared_ptr<Pile> m_lastPile;
     bool m_isSelectedWasteCard = false;
     int m_lastWasteIndex = -1;
     float2 m_offset{};
-    std::shared_ptr<::Foundation> m_lastFoundation;
 
     std::shared_ptr<ShapeCache> m_shapeCache;
     std::unique_ptr<Pack> m_pack;
@@ -219,34 +220,35 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
                 }
                     break;
                 case HitTestZone::PlayArea:
+                //case HitTestZone::Foundations:
                 {
                     // The point is in window space
-                    // Convert from window space to play area space
-                    auto playAreaPoint = point;
-                    auto playAreaHitTestRect = m_zoneRects[HitTestZone::PlayArea];
-                    playAreaPoint.x -= playAreaHitTestRect.X;
-                    playAreaPoint.y -= playAreaHitTestRect.Y;
+                    // Convert from window space to container space (Play Area, Foundation, etc)
+                    auto containerPoint = point;
+                    auto containerHitTestRect = m_zoneRects[zoneType];
+                    containerPoint.x -= containerHitTestRect.X;
+                    containerPoint.y -= containerHitTestRect.Y;
                     for (auto& stack : m_stacks)
                     {
-                        // The point is in play area space
-                        // Convert from play area space to local space for the pile
-                        auto localPoint = playAreaPoint;
+                        // The point is in container space
+                        // Convert from container space to local space for the pile
+                        auto localPoint = containerPoint;
                         localPoint.x -= stack->Base().Offset().x;
                         localPoint.y -= stack->Base().Offset().y;
                         auto result = stack->HitTest(localPoint);
                         if (result.Target == Pile::HitTestTarget::Card &&
                             stack->CanSplit(result.CardIndex))
                         {
-                            m_lastStack = stack;
+                            m_lastPile = stack;
                             m_selectedCards = stack->Split(result.CardIndex);
                             // The first visual in the list will have its offset updated by 
                             // the pile. However, the pile only knows about its own transforms,
-                            // not the play area's. Update the offset so the visual shows up
+                            // not the container's. Update the offset so the visual shows up
                             // properly when added to the selection layer.
                             m_selectedVisual = m_selectedCards.front()->Root();
                             auto offset = m_selectedVisual.Offset();
-                            offset.x += playAreaHitTestRect.X;
-                            offset.y += playAreaHitTestRect.Y;
+                            offset.x += containerHitTestRect.X;
+                            offset.y += containerHitTestRect.Y;
                             m_selectedVisual.Offset(offset);
                         }
                         auto cards = stack->Cards();
@@ -269,7 +271,7 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
                         auto card = m_waste->Pick(index);
                         m_selectedVisual = card->Root();
                         m_selectedCards = { card };
-                        m_lastStack = nullptr;
+                        m_lastPile = nullptr;
                         m_isSelectedWasteCard = true;
                         m_lastWasteIndex = index;
                     }
@@ -308,9 +310,8 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
                                 offset.y += foundationHitTestRect.Y;
                                 m_selectedVisual.Offset(offset);
                                 m_selectedCards = { card };
-                                m_lastStack = nullptr;
+                                m_lastPile = foundation;
                                 m_isSelectedWasteCard = false;
-                                m_lastFoundation = foundation;
                             }
 
                             break;
@@ -353,6 +354,63 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
                 0.0f
             });
         }
+    }
+
+    std::tuple<std::shared_ptr<Pile>, Pile::HitTestResult, HitTestZone> HitTestPiles(
+        float2 const point, 
+        std::initializer_list<Pile::HitTestTarget> const& desiredTargets)
+    {   
+        
+        {
+            auto [result, stack] = HitTestPiles(point, m_stacks, HitTestZone::PlayArea, desiredTargets);
+            if (result.Target != Pile::HitTestTarget::None)
+            {
+                return { stack, result, HitTestZone::PlayArea };
+            }
+        }
+        
+        {
+            auto [result, foundation] = HitTestPiles(point, m_foundations, HitTestZone::Foundations, desiredTargets);
+            if (result.Target != Pile::HitTestTarget::None)
+            {
+                return { foundation, result, HitTestZone::Foundations };
+            }
+        }
+        
+        return { nullptr, { Pile::HitTestTarget::None, -1 }, HitTestZone::None };
+    }
+
+    template <typename PileType>
+    std::pair<Pile::HitTestResult, std::shared_ptr<PileType>> HitTestPiles(
+        float2 const point, 
+        std::vector<std::shared_ptr<PileType>> const& piles,
+        HitTestZone zoneType,
+        std::initializer_list<Pile::HitTestTarget> const& desiredTargets)
+    {
+        // The point is in window space
+        // Convert from window space to container space (Play Area, Foundation, etc)
+        auto containerPoint = point;
+        auto containerHitTestRect = m_zoneRects[zoneType];
+        containerPoint.x -= containerHitTestRect.X;
+        containerPoint.y -= containerHitTestRect.Y;
+        for (auto& pile : piles)
+        {
+            // The point is in container space
+            // Convert from container space to local space for the pile
+            auto localPoint = containerPoint;
+            localPoint.x -= pile->Base().Offset().x;
+            localPoint.y -= pile->Base().Offset().y;
+            auto result = pile->HitTest(localPoint);
+            for (auto& target : desiredTargets)
+            {
+                if (result.Target == target)
+                {
+                    return { result, pile };
+                }
+            }
+        }
+
+        return { { Pile::HitTestTarget::None, -1 }, nullptr };
     }
 
     void OnPointerReleased(IInspectable const&, PointerEventArgs const& args)
@@ -403,21 +461,32 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
             auto shouldBeInStack = foundStack && foundStack->CanAdd(m_selectedCards);
             auto shouldBeInFoundation = foundFoundation && foundFoundation->CanAdd(m_selectedCards);
 
-            if (shouldBeInStack || shouldBeInFoundation)
-            {
-                if (shouldBeInStack)
-                {
-                    foundStack->Add(m_selectedCards);
-                }
-                else
-                {
-                    foundFoundation->Add(m_selectedCards);
-                }
+            auto [foundPile, hitTestResult, hitTestZone] = HitTestPiles(point, { Pile::HitTestTarget::Card, Pile::HitTestTarget::Base });
+            auto shouldBeInPile = foundPile && foundPile->CanAdd(m_selectedCards);
 
-                // Flip the last card in the old stack
-                if (m_lastStack)
+            auto tempShouldBeInPile = shouldBeInStack || shouldBeInFoundation;
+            WINRT_ASSERT(shouldBeInPile == tempShouldBeInPile);
+            std::shared_ptr<Pile> tempFoundPile;
+            if (shouldBeInStack)
+            {
+                tempFoundPile = foundStack;
+            }
+            else
+            {
+                tempFoundPile = foundFoundation;
+            }
+            WINRT_ASSERT((shouldBeInPile ? foundPile.get() : nullptr) == tempFoundPile.get());
+
+            if (tempShouldBeInPile)
+            {
+                tempFoundPile->Add(m_selectedCards);
+
+                // Flip the last card in the old pile
+                // TODO: This was originaly only run for card stacks, find
+                //       a way to clean this up.
+                if (m_lastPile)
                 {
-                    auto cards = m_lastStack->Cards();
+                    auto cards = m_lastPile->Cards();
                     if (!cards.empty())
                     {
                         auto card = cards.back();
@@ -432,19 +501,14 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
                     m_waste->ForceLayout(65.0f);
                 }
             }
-            else if (m_lastStack)
+            else if (m_lastPile)
             {
-                m_lastStack->Add(m_selectedCards);
+                m_lastPile->Add(m_selectedCards);
             }
             else if (m_isSelectedWasteCard)
             {
                 m_waste->InsertCard(m_selectedCards.front(), m_lastWasteIndex);
                 m_waste->ForceLayout(65.0f);
-            }
-            else if (m_lastFoundation)
-            {
-                m_lastFoundation->Add(m_selectedCards);
-                m_lastFoundation->ForceLayout();
             }
             else
             {
@@ -453,7 +517,7 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
         }
         m_selectedVisual = nullptr;
         m_selectedCards.clear();
-        m_lastStack = nullptr;
+        m_lastPile = nullptr;
         m_isSelectedWasteCard = false;
         m_lastWasteIndex = -1;
     }

@@ -18,9 +18,9 @@ public:
 
     enum class HitTestTarget
     {
+        None,
         Base,
-        Card,
-        None
+        Card
     };
 
     struct HitTestResult

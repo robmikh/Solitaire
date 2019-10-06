@@ -34,6 +34,11 @@ bool CardStack::CanSplit(int index)
 
 bool CardStack::CanAdd(Pile::CardList const& cards)
 {
+    if (cards.empty())
+    {
+        return true;
+    }
+
     auto card = cards.front();
     auto cardValue = card->Value();
     if (m_cards.empty())

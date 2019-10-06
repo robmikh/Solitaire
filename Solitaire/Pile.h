@@ -36,12 +36,16 @@ public:
 
     virtual bool CanAdd(Pile::CardList const& cards) = 0;
     void Add(Pile::CardList const& cards);
+    void Return(Pile::CardList const& cards, int index);
 
     void ForceLayout();
 
 protected:
     virtual winrt::Windows::Foundation::Numerics::float3 ComputeOffset(int index) = 0;
     virtual winrt::Windows::Foundation::Numerics::float3 ComputeBaseSpaceOffset(int index) = 0;
+
+private:
+    std::tuple<Pile::CardList, winrt::Windows::UI::Composition::Visual, winrt::Windows::Foundation::Numerics::float3> SplitInternal(int index);
 
 protected:
     winrt::Windows::UI::Composition::ShapeVisual m_background{ nullptr };

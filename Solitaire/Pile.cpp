@@ -124,7 +124,8 @@ Pile::CardList Pile::Split(int index)
 
 void Pile::Add(Pile::CardList const& cards)
 {
-    //WINRT_ASSERT(CanAdd(cards.front()));
+    // TODO: Turn back on
+    //WINRT_ASSERT(CanAdd(cards));
     if (cards.empty())
     {
         return;
@@ -144,4 +145,50 @@ void Pile::Add(Pile::CardList const& cards)
         parentChildren = card->Children();
         m_cards.push_back(card);
     }
+}
+
+void Pile::Return(Pile::CardList const& cards, int index)
+{
+    if (cards.empty())
+    {
+        return;
+    }
+
+    Pile::CardList tail;
+    if (index < m_cards.size())
+    {
+        auto [afterInsertCards, afterInsertVisual, afterInsertOffset] = SplitInternal(index);
+        tail = afterInsertCards;
+    }
+
+    Add(cards);
+    Add(tail);
+}
+
+std::tuple<Pile::CardList, winrt::Visual, winrt::float3> Pile::SplitInternal(int index)
+{
+    auto start = m_cards.begin() + index;
+    auto end = m_cards.end();
+    Pile::CardList result(
+        std::make_move_iterator(start),
+        std::make_move_iterator(end));
+    m_cards.erase(start, end);
+
+    auto firstCardSplit = result.front();
+    auto visualToRemove = firstCardSplit->Root();
+    auto offset = visualToRemove.Offset();
+
+    auto indexOfLastCard = (int)m_cards.size() - 1;
+    if (indexOfLastCard >= 0)
+    {
+        offset += ComputeBaseSpaceOffset(indexOfLastCard);
+        m_cards[indexOfLastCard]->Children().Remove(visualToRemove);
+    }
+    else
+    {
+        m_children.Remove(visualToRemove);
+    }
+    offset += m_background.Offset();
+
+    return { result, visualToRemove, offset };
 }

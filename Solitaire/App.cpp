@@ -42,6 +42,7 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
     Visual m_selectedVisual{ nullptr };
     std::vector<std::shared_ptr<CompositionCard>> m_selectedCards;
     std::shared_ptr<Pile> m_lastPile;
+    Pile::HitTestResult m_lastHitTest;
     bool m_isSelectedWasteCard = false;
     int m_lastWasteIndex = -1;
     float2 m_offset{};
@@ -238,6 +239,7 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
                         offset.y += containerHitTestRect.Y;
                         m_selectedVisual.Offset(offset);
                         m_isSelectedWasteCard = false;
+                        m_lastHitTest = hitTestResult;
                     }
                 }
                     break;
@@ -252,6 +254,7 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
                         m_lastPile = nullptr;
                         m_isSelectedWasteCard = true;
                         m_lastWasteIndex = index;
+                        m_lastHitTest = Pile::HitTestResult();
                     }
                 }
                     break;
@@ -308,7 +311,7 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
             }
         }
         
-        return { nullptr, { Pile::HitTestTarget::None, -1 }, HitTestZone::None };
+        return { nullptr, Pile::HitTestResult(), HitTestZone::None };
     }
 
     template <typename PileType>
@@ -341,7 +344,7 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
             }
         }
 
-        return { { Pile::HitTestTarget::None, -1 }, nullptr };
+        return { Pile::HitTestResult(), nullptr };
     }
 
     void OnPointerReleased(IInspectable const&, PointerEventArgs const& args)
@@ -380,7 +383,7 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
             }
             else if (m_lastPile)
             {
-                m_lastPile->Add(m_selectedCards);
+                m_lastPile->Return(m_selectedCards, m_lastHitTest.CardIndex);
             }
             else if (m_isSelectedWasteCard)
             {
@@ -397,6 +400,7 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
         m_lastPile = nullptr;
         m_isSelectedWasteCard = false;
         m_lastWasteIndex = -1;
+        m_lastHitTest = Pile::HitTestResult();
     }
 
     void App::OnSizeChanged(CoreWindow const& window, WindowSizeChangedEventArgs const& args)

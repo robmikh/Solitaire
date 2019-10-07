@@ -78,10 +78,6 @@ CompositionCard::CompositionCard(
     m_sidesRoot.Children().InsertAtTop(m_front);
     m_back = BuildCardBack(shapeCache);
     m_sidesRoot.Children().InsertAtTop(m_back);
-
-    m_chainedCards = compositor.CreateContainerVisual();
-    m_chainedCards.RelativeSizeAdjustment({ 1, 1 });
-    m_root.Children().InsertAtTop(m_chainedCards);
 }
 
 bool CompositionCard::HitTest(float2 point)

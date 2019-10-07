@@ -40,7 +40,9 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
     VisualCollection m_visuals{ nullptr };
 
     Visual m_selectedVisual{ nullptr };
-    std::vector<std::shared_ptr<CompositionCard>> m_selectedCards;
+    Pile::CardList m_selectedCards;
+    Pile::ItemContainerList m_selectedItemContainers;
+    Pile::RemovalOperation m_lastOperation;
     std::shared_ptr<Pile> m_lastPile;
     Pile::HitTestResult m_lastHitTest;
     bool m_isSelectedWasteCard = false;
@@ -228,12 +230,15 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
                     if (foundPile && foundPile->CanSplit(hitTestResult.CardIndex))
                     {
                         m_lastPile = foundPile;
-                        m_selectedCards = foundPile->Split(hitTestResult.CardIndex);
+                        auto [containers, cards, operation] = foundPile->Split(hitTestResult.CardIndex);
+                        m_selectedItemContainers = containers;
+                        m_selectedCards = cards;
+                        m_lastOperation = operation;
                         // The first visual in the list will have its offset updated by 
                         // the pile. However, the pile only knows about its own transforms,
                         // not the container's. Update the offset so the visual shows up
                         // properly when added to the selection layer.
-                        m_selectedVisual = m_selectedCards.front()->Root();
+                        m_selectedVisual = m_selectedItemContainers.front().Root;
                         auto offset = m_selectedVisual.Offset();
                         offset.x += containerHitTestRect.X;
                         offset.y += containerHitTestRect.Y;
@@ -357,21 +362,18 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
             auto [foundPile, hitTestResult, hitTestZone] = HitTestPiles(point, { Pile::HitTestTarget::Card, Pile::HitTestTarget::Base });
             auto shouldBeInPile = foundPile && foundPile->CanAdd(m_selectedCards);
 
+            for (auto& container : m_selectedItemContainers)
+            {
+                container.Content.Children().RemoveAll();
+            }
+
             if (shouldBeInPile)
             {
                 foundPile->Add(m_selectedCards);
 
-                // Flip the last card in the old pile
-                // TODO: This was originaly only run for card stacks, find
-                //       a way to clean this up.
                 if (m_lastPile)
                 {
-                    auto cards = m_lastPile->Cards();
-                    if (!cards.empty())
-                    {
-                        auto card = cards.back();
-                        card->IsFaceUp(true);
-                    }
+                    m_lastPile->CompleteRemoval(m_lastOperation);
                 }
 
                 // Remove the card from the waste pile
@@ -383,7 +385,7 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
             }
             else if (m_lastPile)
             {
-                m_lastPile->Return(m_selectedCards, m_lastHitTest.CardIndex);
+                m_lastPile->Return(m_selectedCards, m_lastOperation);
             }
             else if (m_isSelectedWasteCard)
             {
@@ -397,6 +399,8 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
         }
         m_selectedVisual = nullptr;
         m_selectedCards.clear();
+        m_selectedItemContainers.clear();
+        m_lastOperation = Pile::RemovalOperation();
         m_lastPile = nullptr;
         m_isSelectedWasteCard = false;
         m_lastWasteIndex = -1;

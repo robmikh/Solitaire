@@ -6,8 +6,20 @@ class CompositionCard;
 class Pile
 {
 public:
+    struct ItemContainer
+    {
+        winrt::Windows::UI::Composition::ContainerVisual Root{ nullptr };
+        winrt::Windows::UI::Composition::ContainerVisual Content{ nullptr };
+    };
+
+    struct RemovalOperation
+    {
+        int Index = -1;
+    };
+
     using Card = std::shared_ptr<CompositionCard>;
     using CardList = std::vector<Pile::Card>;
+    using ItemContainerList = std::vector<Pile::ItemContainer>;
 
     Pile(std::shared_ptr<ShapeCache> const& shapeCache);
     Pile(std::shared_ptr<ShapeCache> const& shapeCache, Pile::CardList cards);
@@ -31,20 +43,14 @@ public:
 
     Pile::HitTestResult HitTest(winrt::Windows::Foundation::Numerics::float2 point);
 
-    struct RemovalOperation
-    {
-        int Index;
-    };
-
     virtual bool CanSplit(int index) = 0;
-    Pile::CardList Split(int index);
+    std::tuple<Pile::ItemContainerList, Pile::CardList, Pile::RemovalOperation> Split(int index);
 
     virtual bool CanTake(int index) = 0;
-    Pile::Card Take(int index);
+    std::tuple<Pile::ItemContainer, Pile::Card, Pile::RemovalOperation> Take(int index);
 
-    // TODO: Make the contract more explicit
-    virtual void CompleteRemoval() = 0;
-    void Return(Pile::CardList const& cards, int index);
+    void CompleteRemoval(Pile::RemovalOperation operation);
+    void Return(Pile::CardList const& cards, Pile::RemovalOperation operation);
 
     virtual bool CanAdd(Pile::CardList const& cards) = 0;
     void Add(Pile::CardList const& cards);
@@ -54,12 +60,11 @@ public:
 protected:
     virtual winrt::Windows::Foundation::Numerics::float3 ComputeOffset(int index) = 0;
     virtual winrt::Windows::Foundation::Numerics::float3 ComputeBaseSpaceOffset(int index) = 0;
-
-private:
-    std::tuple<Pile::CardList, winrt::Windows::UI::Composition::Visual, winrt::Windows::Foundation::Numerics::float3> SplitInternal(int index);
+    virtual void OnRemovalCompleted(Pile::RemovalOperation operation) = 0;
 
 protected:
     winrt::Windows::UI::Composition::ShapeVisual m_background{ nullptr };
     winrt::Windows::UI::Composition::VisualCollection m_children{ nullptr };
     Pile::CardList m_cards;
+    std::vector<ItemContainer> m_itemContainers;
 };

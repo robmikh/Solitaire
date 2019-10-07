@@ -20,6 +20,35 @@ winrt::ShapeVisual CreateBaseVisual(std::shared_ptr<ShapeCache> const& shapeCach
     return visual;
 }
 
+Pile::ItemContainer CreateItemContainer(winrt::Compositor const& compositor)
+{
+    auto root = compositor.CreateContainerVisual();
+    root.Size(CompositionCard::CardSize);
+    auto content = compositor.CreateContainerVisual();
+    content.RelativeSizeAdjustment({ 1, 1 });
+    root.Children().InsertAtTop(content);
+    return { root, content };
+}
+
+std::vector<Pile::ItemContainer> CreateItemContainers(winrt::Compositor const& compositor, uint32_t numberOfItems)
+{
+    std::vector<Pile::ItemContainer> result(numberOfItems);
+    for (int i = 0; i < numberOfItems; i++)
+    {
+        auto container = CreateItemContainer(compositor);
+
+        auto previousIndex = i - 1;
+        if (previousIndex >= 0)
+        {
+            auto previousContainer = result[previousIndex];
+            previousContainer.Root.Children().InsertAbove(container.Root, previousContainer.Content);
+        }
+
+        result[i] = container;
+    }
+    return result;
+}
+
 Pile::Pile(std::shared_ptr<ShapeCache> const& shapeCache)
 {
     m_background = CreateBaseVisual(shapeCache);
@@ -31,21 +60,22 @@ Pile::Pile(std::shared_ptr<ShapeCache> const& shapeCache, Pile::CardList cards)
     m_background = CreateBaseVisual(shapeCache);
     m_children = m_background.Children();
     m_cards = cards;
-
-    
+    m_itemContainers = CreateItemContainers(shapeCache->Compositor(), m_cards.size());
 }
 
 void Pile::ForceLayout()
 {
-    auto parentChildren = m_children;
+    if (!m_itemContainers.empty())
+    {
+        m_children.InsertAtTop(m_itemContainers.front().Root);
+    }
     auto index = 0;
     for (auto& card : m_cards)
     {
         auto visual = card->Root();
         auto offset = ComputeOffset(index);
-        visual.Offset(offset);
-        parentChildren.InsertAtTop(visual);
-        parentChildren = card->Children();
+        m_itemContainers[index].Root.Offset(offset);
+        m_itemContainers[index].Content.Children().InsertAtTop(visual);
         index++;
     }
 }
@@ -59,11 +89,7 @@ Pile::HitTestResult Pile::HitTest(winrt::float2 point)
     {
         auto card = m_cards[i];
 
-        winrt::float3 accumulatedOffset = { 0, 0, 0 };
-        if (i > 0)
-        {
-            accumulatedOffset = ComputeBaseSpaceOffset(i - 1);
-        }
+        winrt::float3 accumulatedOffset = ComputeBaseSpaceOffset(i);
 
         auto tempPoint = point;
         tempPoint.x -= accumulatedOffset.x;
@@ -91,38 +117,42 @@ Pile::HitTestResult Pile::HitTest(winrt::float2 point)
     return result;
 }
 
-Pile::CardList Pile::Split(int index)
+std::tuple<Pile::ItemContainerList, Pile::CardList, Pile::RemovalOperation> Pile::Split(int index)
 {
     WINRT_ASSERT(CanSplit(index));
 
     auto start = m_cards.begin() + index;
     auto end = m_cards.end();
-    Pile::CardList result(
+    Pile::CardList cards(
         std::make_move_iterator(start),
         std::make_move_iterator(end));
     m_cards.erase(start, end);
 
-    auto firstCardSplit = result.front();
-    auto visualToRemove = firstCardSplit->Root();
-    auto offset = visualToRemove.Offset();
+    auto compositor = m_background.Compositor();
+    auto containers = CreateItemContainers(compositor, cards.size());
 
-    auto indexOfLastCard = (int)m_cards.size() - 1;
-    if (indexOfLastCard >= 0)
+    auto cardIndex = 0;
+    auto mainContainerListIndex = index;
+    for (auto& newContainer : containers)
     {
-        offset += ComputeBaseSpaceOffset(indexOfLastCard);
-        m_cards[indexOfLastCard]->Children().Remove(visualToRemove);
-    }
-    else
-    {
-        m_children.Remove(visualToRemove);
-    }
-    offset += m_background.Offset();
-    visualToRemove.Offset({ offset });
+        auto card = cards[cardIndex];
+        auto visual = card->Root();
+        m_itemContainers[mainContainerListIndex].Content.Children().Remove(visual);
 
-    return result;
+        auto offset = ComputeOffset(mainContainerListIndex);
+        newContainer.Root.Offset(offset);
+        newContainer.Content.Children().InsertAtTop(visual);
+
+        mainContainerListIndex++;
+        cardIndex++;
+    }
+    
+    containers.front().Root.Offset(ComputeBaseSpaceOffset(index) + m_background.Offset());
+
+    return { containers, cards, { index } };
 }
 
-Pile::Card Pile::Take(int index)
+std::tuple<Pile::ItemContainer, Pile::Card, Pile::RemovalOperation> Pile::Take(int index)
 {
     WINRT_ASSERT(CanTake(index));
 
@@ -130,106 +160,118 @@ Pile::Card Pile::Take(int index)
     auto visualToRemove = card->Root();
     m_cards.erase(m_cards.begin() + index);
 
-    // Get the new card at that location
-    if (m_cards.size() != index)
-    {
-        auto shiftedCard = m_cards[index];
-        auto shiftedVisual = shiftedCard->Root();
-        auto previousCard = m_cards[index - 1];
+    auto oldContainer = m_itemContainers[index];
+    oldContainer.Content.Children().Remove(visualToRemove);
 
-        previousCard->Children().Remove(visualToRemove);
+    auto compositor = m_background.Compositor();
+    auto newContainer = CreateItemContainer(compositor);
 
-        auto shiftedCardOldOffset = ComputeOffset(index + 1) + ComputeOffset(index);
-        card->Children().Remove(shiftedVisual);
-        shiftedVisual.Offset(shiftedCardOldOffset);
-        previousCard->Children().InsertAtTop(shiftedVisual);
+    newContainer.Root.Offset(ComputeBaseSpaceOffset(index));
 
-        throw winrt::hresult_not_implemented();
-    }
-    else
-    {
-        m_children.Remove(visualToRemove);
-    }
-
-    auto offset = visualToRemove.Offset();
-    auto indexOfLastCard = (int)m_cards.size() - 1;
-    if (indexOfLastCard >= 0)
-    {
-        offset += ComputeBaseSpaceOffset(indexOfLastCard);
-    }
-    offset += m_background.Offset();
-    visualToRemove.Offset({ offset });
-
-    return card;
+    return { newContainer, card, { index } };
 }
 
 void Pile::Add(Pile::CardList const& cards)
 {
-    // TODO: Turn back on
-    //WINRT_ASSERT(CanAdd(cards));
+    WINRT_ASSERT(CanAdd(cards));
+    WINRT_ASSERT(m_itemContainers.size() == m_cards.size());
     if (cards.empty())
     {
         return;
     }
 
-    auto parentChildren = m_cards.empty() ? m_children : m_cards.back()->Children();
-    for (auto& card : cards)
+    auto compositor = m_background.Compositor();
+    auto newContainers = CreateItemContainers(compositor, cards.size());
+
+    if (!m_itemContainers.empty())
     {
-        auto index = m_cards.size();
-        auto visual = card->Root();
-        visual.Offset(ComputeOffset(index));
-        if (!visual.Parent())
-        {
-            parentChildren.InsertAtTop(visual);
-        }
-        // TODO: Assert the parent is correct
-        parentChildren = card->Children();
-        m_cards.push_back(card);
-    }
-}
-
-void Pile::Return(Pile::CardList const& cards, int index)
-{
-    if (cards.empty())
-    {
-        return;
-    }
-
-    Pile::CardList tail;
-    if (index < m_cards.size())
-    {
-        auto [afterInsertCards, afterInsertVisual, afterInsertOffset] = SplitInternal(index);
-        tail = afterInsertCards;
-    }
-
-    Add(cards);
-    Add(tail);
-}
-
-std::tuple<Pile::CardList, winrt::Visual, winrt::float3> Pile::SplitInternal(int index)
-{
-    auto start = m_cards.begin() + index;
-    auto end = m_cards.end();
-    Pile::CardList result(
-        std::make_move_iterator(start),
-        std::make_move_iterator(end));
-    m_cards.erase(start, end);
-
-    auto firstCardSplit = result.front();
-    auto visualToRemove = firstCardSplit->Root();
-    auto offset = visualToRemove.Offset();
-
-    auto indexOfLastCard = (int)m_cards.size() - 1;
-    if (indexOfLastCard >= 0)
-    {
-        offset += ComputeBaseSpaceOffset(indexOfLastCard);
-        m_cards[indexOfLastCard]->Children().Remove(visualToRemove);
+        m_itemContainers.back().Root.Children().InsertAtTop(newContainers.front().Root);
     }
     else
     {
-        m_children.Remove(visualToRemove);
+        m_children.InsertAtTop(newContainers.front().Root);
     }
-    offset += m_background.Offset();
 
-    return { result, visualToRemove, offset };
+    auto newContainerIndex = 0;
+    for (auto& card : cards)
+    {
+        auto mainListIndex = m_cards.size();
+        auto visual = card->Root();
+        visual.Offset({ 0, 0, 0 });
+
+        auto newContainer = newContainers[newContainerIndex];
+        newContainer.Root.Offset(ComputeOffset(mainListIndex));
+        newContainer.Content.Children().InsertAtTop(visual);
+        m_itemContainers.push_back(newContainer);
+        m_cards.push_back(card);
+
+        newContainerIndex++;
+    }
+}
+
+void Pile::Return(Pile::CardList const& cards, Pile::RemovalOperation operation)
+{
+    if (cards.empty())
+    {
+        return;
+    }
+
+    auto index = operation.Index;
+    auto returnedCardIndex = 0;
+    for (auto container = m_itemContainers.begin() + index; container != m_itemContainers.begin() + index + cards.size(); container++)
+    {
+        auto cardVisual = cards[returnedCardIndex]->Root();
+        cardVisual.Offset({ 0, 0, 0 });
+        container->Content.Children().InsertAtTop(cardVisual);
+        m_cards.push_back(cards[returnedCardIndex]);
+        returnedCardIndex++;
+    }
+}
+
+void Pile::CompleteRemoval(Pile::RemovalOperation operation)
+{
+    WINRT_ASSERT(m_itemContainers.size() != m_cards.size());
+    auto endIndex = operation.Index;
+    for (auto container = m_itemContainers.begin() + operation.Index; container != m_itemContainers.end(); container++)
+    {
+        if (container->Content.Children().Count() > 0)
+        {
+            break;
+        }
+        endIndex++;
+    }
+
+    auto start = m_itemContainers.begin() + operation.Index;
+    auto end = m_itemContainers.begin() + endIndex;
+    Pile::ItemContainerList containers(
+        std::make_move_iterator(start),
+        std::make_move_iterator(end));
+    m_itemContainers.erase(start, end);
+
+    auto previousIndex = operation.Index - 1;
+    auto parentChildren = m_children;
+    if (previousIndex >= 0)
+    {
+        parentChildren = m_itemContainers[previousIndex].Root.Children();
+    }
+    parentChildren.Remove(containers.front().Root);
+
+    if (operation.Index < m_itemContainers.size())
+    {
+        auto shiftedVisual = m_itemContainers[operation.Index].Root;
+        if (shiftedVisual.Parent())
+        {
+            shiftedVisual.Parent().Children().Remove(shiftedVisual);
+        }
+        parentChildren.InsertAtTop(shiftedVisual);
+
+        auto currentIndex = operation.Index;
+        for (auto container = m_itemContainers.begin() + operation.Index; container != m_itemContainers.end(); container++)
+        {
+            container->Root.Offset(ComputeOffset(currentIndex));
+            currentIndex++;
+        }
+    }
+
+    OnRemovalCompleted(operation);
 }

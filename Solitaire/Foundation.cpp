@@ -28,6 +28,11 @@ bool Foundation::CanAdd(Pile::CardList const& cards)
         return false;
     }
 
+    if (m_cards.size() != m_itemContainers.size())
+    {
+        return false;
+    }
+
     auto card = cards.front();
     auto cardValue = card->Value();
     if (m_cards.empty())
@@ -55,6 +60,6 @@ winrt::float3 Foundation::ComputeBaseSpaceOffset(int index)
     return { 0, 0, 0 };
 }
 
-void Foundation::CompleteRemoval()
+void Foundation::OnRemovalCompleted(Pile::RemovalOperation operation)
 {
 }

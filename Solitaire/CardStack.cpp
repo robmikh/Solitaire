@@ -44,6 +44,11 @@ bool CardStack::CanAdd(Pile::CardList const& cards)
         return true;
     }
 
+    if (m_cards.size() != m_itemContainers.size())
+    {
+        return false;
+    }
+
     auto card = cards.front();
     auto cardValue = card->Value();
     if (m_cards.empty())
@@ -76,6 +81,11 @@ winrt::float3 CardStack::ComputeBaseSpaceOffset(int index)
     return { 0, index * m_verticalOffset, 0 };
 }
 
-void CardStack::CompleteRemoval()
+void CardStack::OnRemovalCompleted(Pile::RemovalOperation operation)
 {
+    if (!m_cards.empty())
+    {
+        auto card = m_cards.back();
+        card->IsFaceUp(true);
+    }
 }

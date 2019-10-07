@@ -122,6 +122,47 @@ Pile::CardList Pile::Split(int index)
     return result;
 }
 
+Pile::Card Pile::Take(int index)
+{
+    WINRT_ASSERT(CanTake(index));
+
+    auto card = m_cards[index];
+    auto visualToRemove = card->Root();
+    m_cards.erase(m_cards.begin() + index);
+
+    // Get the new card at that location
+    if (m_cards.size() != index)
+    {
+        auto shiftedCard = m_cards[index];
+        auto shiftedVisual = shiftedCard->Root();
+        auto previousCard = m_cards[index - 1];
+
+        previousCard->Children().Remove(visualToRemove);
+
+        auto shiftedCardOldOffset = ComputeOffset(index + 1) + ComputeOffset(index);
+        card->Children().Remove(shiftedVisual);
+        shiftedVisual.Offset(shiftedCardOldOffset);
+        previousCard->Children().InsertAtTop(shiftedVisual);
+
+        throw winrt::hresult_not_implemented();
+    }
+    else
+    {
+        m_children.Remove(visualToRemove);
+    }
+
+    auto offset = visualToRemove.Offset();
+    auto indexOfLastCard = (int)m_cards.size() - 1;
+    if (indexOfLastCard >= 0)
+    {
+        offset += ComputeBaseSpaceOffset(indexOfLastCard);
+    }
+    offset += m_background.Offset();
+    visualToRemove.Offset({ offset });
+
+    return card;
+}
+
 void Pile::Add(Pile::CardList const& cards)
 {
     // TODO: Turn back on

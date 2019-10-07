@@ -31,12 +31,23 @@ public:
 
     Pile::HitTestResult HitTest(winrt::Windows::Foundation::Numerics::float2 point);
 
+    struct RemovalOperation
+    {
+        int Index;
+    };
+
     virtual bool CanSplit(int index) = 0;
     Pile::CardList Split(int index);
 
+    virtual bool CanTake(int index) = 0;
+    Pile::Card Take(int index);
+
+    // TODO: Make the contract more explicit
+    virtual void CompleteRemoval() = 0;
+    void Return(Pile::CardList const& cards, int index);
+
     virtual bool CanAdd(Pile::CardList const& cards) = 0;
     void Add(Pile::CardList const& cards);
-    void Return(Pile::CardList const& cards, int index);
 
     void ForceLayout();
 

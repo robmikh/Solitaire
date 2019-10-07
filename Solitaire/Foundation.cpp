@@ -16,6 +16,11 @@ bool Foundation::CanSplit(int index)
     return !m_cards.empty() && index == m_cards.size() - 1;
 }
 
+bool Foundation::CanTake(int index)
+{
+    return false;
+}
+
 bool Foundation::CanAdd(Pile::CardList const& cards)
 {
     if (cards.size() != 1)
@@ -48,4 +53,8 @@ winrt::float3 Foundation::ComputeOffset(int index)
 winrt::float3 Foundation::ComputeBaseSpaceOffset(int index)
 {
     return { 0, 0, 0 };
+}
+
+void Foundation::CompleteRemoval()
+{
 }

@@ -32,6 +32,11 @@ bool CardStack::CanSplit(int index)
     return true;
 }
 
+bool CardStack::CanTake(int index)
+{
+    return false;
+}
+
 bool CardStack::CanAdd(Pile::CardList const& cards)
 {
     if (cards.empty())
@@ -69,4 +74,8 @@ winrt::float3 CardStack::ComputeOffset(int index)
 winrt::float3 CardStack::ComputeBaseSpaceOffset(int index)
 {
     return { 0, index * m_verticalOffset, 0 };
+}
+
+void CardStack::CompleteRemoval()
+{
 }

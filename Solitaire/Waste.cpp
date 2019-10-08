@@ -39,8 +39,22 @@ Pile::CardList Waste::Flush()
 
 void Waste::Discard(Pile::CardList const& cards)
 {
+    auto numCardsBefore = m_cards.size();
+    // All cards should be in the stack now. Only the cards we add will be fanned out.
+    auto count = 0;
+    for (auto container = m_itemContainers.rbegin(); container != m_itemContainers.rend() && count < 3; container++, count++)
+    {
+        container->Root.Offset({ 0, 0, 0 });
+    }
     Add(cards);
-    ForceLayout();
+    // Force the last three cards to be fanned out, regardless of layout
+    count = 0;
+    for (auto container = m_itemContainers.rbegin(); container != m_itemContainers.rend() && count < 3; container++, count++)
+    {
+        // Since we're walking the list backwards, we have to flip the count
+        // indexRelativeToEnd = (last index) - count
+        container->Root.Offset(ComputeOffset(3 - 1 - count, 3));
+    }
 }
 
 bool Waste::CanTake(int index)
@@ -60,7 +74,8 @@ bool Waste::CanAdd(Pile::CardList const& cards)
 
 winrt::float3 Waste::ComputeOffset(int index, int totalCards)
 {
-    if (index > totalCards - 3 && index < totalCards)
+    WINRT_ASSERT(index < totalCards);
+    if (index > totalCards - 3)
     {
         return { m_horizontalOffset, 0, 0 };
     }
@@ -69,7 +84,8 @@ winrt::float3 Waste::ComputeOffset(int index, int totalCards)
 
 winrt::float3 Waste::ComputeBaseSpaceOffset(int index, int totalCards)
 {
-    if (index > totalCards - 3 && index < totalCards)
+    WINRT_ASSERT(index < totalCards);
+    if (index > totalCards - 3)
     {
         return { (index - (totalCards - 3)) * m_horizontalOffset, 0, 0 };
     }
@@ -78,4 +94,12 @@ winrt::float3 Waste::ComputeBaseSpaceOffset(int index, int totalCards)
 
 void Waste::OnRemovalCompleted(Pile::RemovalOperation operation)
 {
+    // Force the last three cards to be fanned out, regardless of layout
+    auto count = 0;
+    for (auto container = m_itemContainers.rbegin(); container != m_itemContainers.rend() && count < 3; container++, count++)
+    {
+        // Since we're walking the list backwards, we have to flip the count
+        // indexRelativeToEnd = (last index) - count
+        container->Root.Offset(ComputeOffset(3 - 1 - count, 3));
+    }
 }

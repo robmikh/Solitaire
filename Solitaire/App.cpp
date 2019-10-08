@@ -17,6 +17,7 @@ using namespace Windows::Foundation::Numerics;
 using namespace Windows::UI;
 using namespace Windows::UI::Core;
 using namespace Windows::UI::Composition;
+using namespace Windows::UI::Popups;
 
 enum class HitTestZone
 {
@@ -103,7 +104,12 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
 
         // Init cards
         m_pack = std::make_unique<Pack>(m_shapeCache);
+#ifdef _DEBUG
+        m_pack->Shuffle({ 1318857190, 1541316502, 3202618166, 965450609 });
+        //m_pack->Shuffle();
+#else
         m_pack->Shuffle();
+#endif
         auto cards = m_pack->Cards();
         auto textHeight = m_shapeCache->TextHeight();
 
@@ -362,6 +368,12 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
         return { Pile::HitTestResult(), nullptr };
     }
 
+    fire_and_forget DisplayWinMessage()
+    {
+        auto dialog = MessageDialog(L"You won!");
+        co_await dialog.ShowAsync();
+    }
+
     void OnPointerReleased(IInspectable const&, PointerEventArgs const& args)
     {
         if (m_selectedVisual)
@@ -384,6 +396,27 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
                 if (m_lastPile)
                 {
                     m_lastPile->CompleteRemoval(m_lastOperation);
+                }
+
+                // If we just added something to a foundation, let's check to see
+                // if the player has won.
+                if (hitTestZone == HitTestZone::Foundations)
+                {
+                    auto hasWon = true;
+                    for (auto& foundation : m_foundations)
+                    {
+                        auto cards = foundation->Cards();
+                        if (cards.size() != 13)
+                        {
+                            hasWon = false;
+                            break;
+                        }
+                    }
+
+                    if (hasWon)
+                    {
+                        DisplayWinMessage();
+                    }
                 }
             }
             else if (m_lastPile)

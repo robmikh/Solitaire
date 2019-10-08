@@ -10,6 +10,7 @@
 #include <winrt/Windows.UI.Core.h>
 #include <winrt/Windows.UI.Composition.h>
 #include <winrt/Windows.UI.Input.h>
+#include <winrt/Windows.UI.Popups.h>
 
 #include <vector>
 #include <memory>
@@ -20,3 +21,4 @@
 #include <queue>
 #include <stack>
 #include <type_traits>
+#include <sstream>

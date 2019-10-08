@@ -32,6 +32,22 @@ Pack::Pack(std::shared_ptr<ShapeCache> const& shapeCache)
 void Pack::Shuffle()
 {
     std::random_device rd;
-    std::mt19937 g(rd());
+    Shuffle({ rd(), rd(), rd(), rd() });
+}
+
+void Pack::Shuffle(Pack::ShuffleSeed seed)
+{
+    m_currentSeed = seed;
+    std::seed_seq rngSeed{ m_currentSeed.Num1, m_currentSeed.Num2, m_currentSeed.Num3, m_currentSeed.Num4 };
+    std::mt19937 g(rngSeed);
     std::shuffle(m_cards.begin(), m_cards.end(), g);
+
+#ifdef _DEBUG
+    std::wstringstream debugMessage;
+    debugMessage << L"Seed used: { " << m_currentSeed.Num1 << L", ";
+    debugMessage << m_currentSeed.Num2 << L", ";
+    debugMessage << m_currentSeed.Num3 << L", ";
+    debugMessage << m_currentSeed.Num4 << L" }" << std::endl;
+    OutputDebugStringW(debugMessage.str().c_str());
+#endif
 }

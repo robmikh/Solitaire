@@ -50,12 +50,12 @@ bool Foundation::CanAdd(Pile::CardList const& cards)
     return (int)cardValue.Face() == (int)lastCardValue.Face() + 1;
 }
 
-winrt::float3 Foundation::ComputeOffset(int index)
+winrt::float3 Foundation::ComputeOffset(int index, int totalCards)
 {
     return { 0, 0, 0 };
 }
 
-winrt::float3 Foundation::ComputeBaseSpaceOffset(int index)
+winrt::float3 Foundation::ComputeBaseSpaceOffset(int index, int totalCards)
 {
     return { 0, 0, 0 };
 }

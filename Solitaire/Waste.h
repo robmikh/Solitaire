@@ -1,27 +1,27 @@
 #pragma once
+#include "Pile.h"
 
 class ShapeCache;
 class CompositionCard;
 
-class Waste
+class Waste : public Pile
 {
 public:
-    Waste(std::shared_ptr<ShapeCache> const& shapeCache);
-    ~Waste() {}
+    Waste(std::shared_ptr<ShapeCache> const& shapeCache) : Pile(shapeCache) {}
 
-    winrt::Windows::UI::Composition::Visual Base() { return m_background; }
-    const std::vector<std::shared_ptr<CompositionCard>>& Cards() const { return m_cards; }
-    
-    int HitTest(winrt::Windows::Foundation::Numerics::float2 point);
-    std::shared_ptr<CompositionCard> Pick(int index);
-    void AddCards(std::vector<std::shared_ptr<CompositionCard>> const& cards);
-    std::vector<std::shared_ptr<CompositionCard>> Flush();
-    bool RemoveCard(std::shared_ptr<CompositionCard> const& remove);
-    void ForceLayout(float fanRatio);
-    void InsertCard(std::shared_ptr<CompositionCard> const& card, int index);
+    void SetLayoutOptions(float horizontalOffset);
+    Pile::CardList Flush();
+    void Discard(Pile::CardList const& cards);
+
+    virtual bool CanSplit(int index) override { return false; }
+    virtual bool CanTake(int index) override;
+    virtual bool CanAdd(Pile::CardList const& cards) override;
+
+protected:
+    virtual winrt::Windows::Foundation::Numerics::float3 ComputeOffset(int index, int totalCards) override;
+    virtual winrt::Windows::Foundation::Numerics::float3 ComputeBaseSpaceOffset(int index, int totalCards) override;
+    virtual void OnRemovalCompleted(Pile::RemovalOperation operation) override;
 
 private:
-    winrt::Windows::UI::Composition::ShapeVisual m_background{ nullptr };
-    std::vector<std::shared_ptr<CompositionCard>> m_cards;
-    float m_fanRatio = 0;
+    float m_horizontalOffset = 0.0f;
 };

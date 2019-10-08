@@ -71,12 +71,12 @@ bool CardStack::CanAdd(Pile::CardList const& cards)
     return (int)cardValue.Face() == (int)lastCardValue.Face() - 1;
 }
 
-winrt::float3 CardStack::ComputeOffset(int index)
+winrt::float3 CardStack::ComputeOffset(int index, int totalCards)
 {
     return { 0, index == 0 ? 0 : m_verticalOffset, 0 };
 }
 
-winrt::float3 CardStack::ComputeBaseSpaceOffset(int index)
+winrt::float3 CardStack::ComputeBaseSpaceOffset(int index, int totalCards)
 {
     return { 0, index * m_verticalOffset, 0 };
 }

@@ -45,8 +45,6 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
     Pile::RemovalOperation m_lastOperation;
     std::shared_ptr<Pile> m_lastPile;
     Pile::HitTestResult m_lastHitTest;
-    bool m_isSelectedWasteCard = false;
-    int m_lastWasteIndex = -1;
     float2 m_offset{};
 
     std::shared_ptr<ShapeCache> m_shapeCache;
@@ -54,7 +52,7 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
     std::vector<std::shared_ptr<CardStack>> m_stacks;
     std::map<HitTestZone, Rect> m_zoneRects;
     std::unique_ptr<Deck> m_deck;
-    std::unique_ptr<Waste> m_waste;
+    std::shared_ptr<Waste> m_waste;
     std::vector<std::shared_ptr<::Foundation>> m_foundations;
 
     IFrameworkView CreateView()
@@ -158,11 +156,14 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
         m_zoneRects.insert({ HitTestZone::Deck, { 0, 0, cardSize.x, cardSize.y } });
 
         // Waste
-        m_waste = std::make_unique<Waste>(m_shapeCache);
-        m_waste->ForceLayout(65.0f);
-        auto wasteVisual = m_waste->Base();
-        wasteVisual.Offset({ cardSize.x + 25.0f, 0, 0 });
-        m_visuals.InsertAtTop(wasteVisual);
+        m_wasteVisual = compositor.CreateContainerVisual();
+        m_wasteVisual.Size({ (2.0f * 65.0f) + cardSize.x, cardSize.y });
+        m_wasteVisual.Offset({ cardSize.x + 25.0f, 0, 0 });
+        m_waste = std::make_shared<Waste>(m_shapeCache);
+        m_waste->SetLayoutOptions(65.0f);
+        m_waste->ForceLayout();
+        m_wasteVisual.Children().InsertAtTop(m_waste->Base());
+        m_visuals.InsertAtTop(m_wasteVisual);
         m_zoneRects.insert({ HitTestZone::Waste, { cardSize.x + 25.0f, 0, (2.0f * 65.0f) + cardSize.x, cardSize.y } });
 
         // Foundation
@@ -211,8 +212,8 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
 
                         if (!cards.empty())
                         {
-                            m_waste->AddCards(cards);
-                            m_waste->ForceLayout(65.0f);
+                            m_waste->Discard(cards);
+                            //m_waste->ForceLayout(65.0f);
                         }
                         else
                         {
@@ -224,42 +225,43 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
                     break;
                 case HitTestZone::PlayArea:
                 case HitTestZone::Foundations:
+                case HitTestZone::Waste:
                 {
                     auto containerHitTestRect = m_zoneRects[zoneType];
                     auto [foundPile, hitTestResult, hitTestZone] = HitTestPiles(point, { Pile::HitTestTarget::Card });
-                    if (foundPile && foundPile->CanSplit(hitTestResult.CardIndex))
+                    if (foundPile)
                     {
-                        m_lastPile = foundPile;
-                        auto [containers, cards, operation] = foundPile->Split(hitTestResult.CardIndex);
-                        m_selectedItemContainers = containers;
-                        m_selectedCards = cards;
-                        m_lastOperation = operation;
-                        // The first visual in the list will have its offset updated by 
-                        // the pile. However, the pile only knows about its own transforms,
-                        // not the container's. Update the offset so the visual shows up
-                        // properly when added to the selection layer.
-                        m_selectedVisual = m_selectedItemContainers.front().Root;
-                        auto offset = m_selectedVisual.Offset();
-                        offset.x += containerHitTestRect.X;
-                        offset.y += containerHitTestRect.Y;
-                        m_selectedVisual.Offset(offset);
-                        m_isSelectedWasteCard = false;
-                        m_lastHitTest = hitTestResult;
-                    }
-                }
-                    break;
-                case HitTestZone::Waste:
-                {
-                    auto index = m_waste->HitTest(point);
-                    if (index >= 0)
-                    {
-                        auto card = m_waste->Pick(index);
-                        m_selectedVisual = card->Root();
-                        m_selectedCards = { card };
-                        m_lastPile = nullptr;
-                        m_isSelectedWasteCard = true;
-                        m_lastWasteIndex = index;
-                        m_lastHitTest = Pile::HitTestResult();
+                        auto canSplit = foundPile->CanSplit(hitTestResult.CardIndex);
+                        auto canTake = foundPile->CanTake(hitTestResult.CardIndex);
+
+                        if (canSplit || canTake)
+                        {
+                            m_lastPile = foundPile;
+                            if (canSplit)
+                            {
+                                auto [containers, cards, operation] = foundPile->Split(hitTestResult.CardIndex);
+                                m_selectedItemContainers = containers;
+                                m_selectedCards = cards;
+                                m_lastOperation = operation;
+                            }
+                            else if (canTake)
+                            {
+                                auto [container, card, operation] = foundPile->Take(hitTestResult.CardIndex);
+                                m_selectedItemContainers = { container };
+                                m_selectedCards = { card };
+                                m_lastOperation = operation;
+                            }
+                            // The first visual in the list will have its offset updated by 
+                            // the pile. However, the pile only knows about its own transforms,
+                            // not the container's. Update the offset so the visual shows up
+                            // properly when added to the selection layer.
+                            m_selectedVisual = m_selectedItemContainers.front().Root;
+                            auto offset = m_selectedVisual.Offset();
+                            offset.x += containerHitTestRect.X;
+                            offset.y += containerHitTestRect.Y;
+                            m_selectedVisual.Offset(offset);
+                            m_lastHitTest = hitTestResult;
+                        }
                     }
                 }
                     break;
@@ -313,6 +315,14 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
             if (result.Target != Pile::HitTestTarget::None)
             {
                 return { foundation, result, HitTestZone::Foundations };
+            }
+        }
+
+        {
+            auto [result, waste] = HitTestPiles<Waste>(point, { m_waste }, HitTestZone::Waste, desiredTargets);
+            if (result.Target != Pile::HitTestTarget::None)
+            {
+                return { waste, result, HitTestZone::Waste };
             }
         }
         
@@ -375,22 +385,10 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
                 {
                     m_lastPile->CompleteRemoval(m_lastOperation);
                 }
-
-                // Remove the card from the waste pile
-                if (m_isSelectedWasteCard)
-                {
-                    m_waste->RemoveCard(m_selectedCards.front());
-                    m_waste->ForceLayout(65.0f);
-                }
             }
             else if (m_lastPile)
             {
                 m_lastPile->Return(m_selectedCards, m_lastOperation);
-            }
-            else if (m_isSelectedWasteCard)
-            {
-                m_waste->InsertCard(m_selectedCards.front(), m_lastWasteIndex);
-                m_waste->ForceLayout(65.0f);
             }
             else
             {
@@ -402,8 +400,6 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
         m_selectedItemContainers.clear();
         m_lastOperation = Pile::RemovalOperation();
         m_lastPile = nullptr;
-        m_isSelectedWasteCard = false;
-        m_lastWasteIndex = -1;
         m_lastHitTest = Pile::HitTestResult();
     }
 

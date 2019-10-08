@@ -69,7 +69,7 @@ void Deck::AddCards(std::vector<std::shared_ptr<CompositionCard>> const& cards)
     {
         auto visual = card->Root();
         visual.Offset({ 0, 0, 0 });
-        visual.Parent().Children().Remove(visual);
+        //visual.Parent().Children().Remove(visual);
         m_background.Children().InsertAtTop(visual);
         card->IsFaceUp(false);
 

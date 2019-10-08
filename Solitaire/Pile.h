@@ -58,8 +58,8 @@ public:
     void ForceLayout();
 
 protected:
-    virtual winrt::Windows::Foundation::Numerics::float3 ComputeOffset(int index) = 0;
-    virtual winrt::Windows::Foundation::Numerics::float3 ComputeBaseSpaceOffset(int index) = 0;
+    virtual winrt::Windows::Foundation::Numerics::float3 ComputeOffset(int index, int totalCards) = 0;
+    virtual winrt::Windows::Foundation::Numerics::float3 ComputeBaseSpaceOffset(int index, int totalCards) = 0;
     virtual void OnRemovalCompleted(Pile::RemovalOperation operation) = 0;
 
 protected:

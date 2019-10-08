@@ -4,136 +4,78 @@
 #include "ShapeCache.h"
 #include "Waste.h"
 
-using namespace winrt;
-
-using namespace Windows;
-using namespace Windows::ApplicationModel::Core;
-using namespace Windows::Foundation;
-using namespace Windows::Foundation::Numerics;
-using namespace Windows::UI;
-using namespace Windows::UI::Core;
-using namespace Windows::UI::Composition;
-
-Waste::Waste(std::shared_ptr<ShapeCache> const& shapeCache)
+namespace winrt
 {
-    auto compositor = shapeCache->Compositor();
-    m_background = compositor.CreateShapeVisual();
-    m_background.Shapes().Append(shapeCache->GetShape(ShapeType::Empty));
-    m_background.Size(CompositionCard::CardSize);
+    using namespace Windows;
+    using namespace Windows::ApplicationModel::Core;
+    using namespace Windows::Foundation;
+    using namespace Windows::Foundation::Numerics;
+    using namespace Windows::UI;
+    using namespace Windows::UI::Core;
+    using namespace Windows::UI::Composition;
 }
 
-int Waste::HitTest(winrt::Windows::Foundation::Numerics::float2 point)
+void Waste::SetLayoutOptions(float horizontalOffset)
 {
-    float3 const offset = m_background.Offset();
-    int index = m_cards.size() - 1;
-    for (auto it = m_cards.rbegin(); it != m_cards.rend(); ++it)
+    m_horizontalOffset = horizontalOffset;
+}
+
+Pile::CardList Waste::Flush()
+{
+    for (auto& container : m_itemContainers)
     {
-        auto card = *it;
-        auto temp = point;
-        temp.x -= offset.x;
-        temp.y -= offset.y;
-        if (card->HitTest(temp))
-        {
-            return index;
-        }
-        index--;
+        container.Content.Children().RemoveAll();
     }
+    m_itemContainers.clear();
+    m_children.RemoveAll();
 
-    return -1;
-}
-
-std::shared_ptr<CompositionCard> Waste::Pick(int index)
-{
-    if (m_cards.empty() || index < 0 || index >= m_cards.size())
-    {
-        return nullptr;
-    }
-
-    auto card = m_cards[index];
-    m_cards.erase(m_cards.begin() + index);
-    auto visual = card->Root();
-    auto parent = visual.Parent();
-    auto offset = visual.Offset();
-    offset.x += parent.Offset().x;
-    visual.Offset(offset);
-    parent.Children().Remove(visual);
-    return card;
-}
-
-void Waste::AddCards(std::vector<std::shared_ptr<CompositionCard>> const& cards)
-{
-    auto count = 0;
-    for (auto& card : cards)
-    {
-        auto visual = card->Root();
-        m_cards.push_back(card);
-        float2 const size = visual.Size();
-        visual.Offset({ count * m_fanRatio, 0, 0 });
-        m_background.Children().InsertAtTop(visual);
-        count++;
-    }
-}
-
-std::vector<std::shared_ptr<CompositionCard>> Waste::Flush()
-{
     std::vector<std::shared_ptr<CompositionCard>> result(
         std::make_move_iterator(m_cards.rbegin()),
         std::make_move_iterator(m_cards.rend()));
     m_cards.erase(m_cards.begin(), m_cards.end());
+
     return result;
 }
 
-bool Waste::RemoveCard(std::shared_ptr<CompositionCard> const& remove)
+void Waste::Discard(Pile::CardList const& cards)
 {
-    auto find = std::find(m_cards.begin(), m_cards.end(), remove);
-    if (find != m_cards.end())
+    Add(cards);
+    ForceLayout();
+}
+
+bool Waste::CanTake(int index)
+{
+    if (m_cards.empty() || index < 0 || index >= m_cards.size())
     {
-        m_cards.erase(find);
-        return true;
+        return false;
     }
+
+    return true;
+}
+
+bool Waste::CanAdd(Pile::CardList const& cards)
+{
     return false;
 }
 
-void Waste::ForceLayout(float fanRatio)
+winrt::float3 Waste::ComputeOffset(int index, int totalCards)
 {
-    m_fanRatio = fanRatio;
-
-    if (m_cards.empty())
+    if (index > totalCards - 3 && index < totalCards)
     {
-        return;
+        return { m_horizontalOffset, 0, 0 };
     }
-
-    m_background.Children().RemoveAll();
-    auto count = 0;
-    auto threshold = m_cards.size() - 3;
-    if (m_cards.size() < 3)
-    {
-        threshold = 0;
-    }
-    for (auto& card : m_cards)
-    {
-        auto visual = card->Root();
-        
-        if (visual.Parent())
-        {
-            visual.Parent().Children().Remove(visual);
-        }
-
-        m_background.Children().InsertAtTop(visual);
-
-        float2 const size = visual.Size();
-        visual.Offset({ (count > threshold ? count - threshold : 0) * m_fanRatio, 0, 0 });
-        count++;
-    }
+    return { 0, 0, 0 };
 }
 
-void Waste::InsertCard(std::shared_ptr<CompositionCard> const& card, int index)
+winrt::float3 Waste::ComputeBaseSpaceOffset(int index, int totalCards)
 {
-    m_cards.insert(m_cards.begin() + index, card);
-    index--;
-    if (index >= 0)
+    if (index > totalCards - 3 && index < totalCards)
     {
-        auto previousVisual = m_cards[index]->Root();
-        m_background.Children().InsertAbove(card->Root(), previousVisual);
+        return { (index - (totalCards - 3)) * m_horizontalOffset, 0, 0 };
     }
+    return { 0, 0, 0 };
+}
+
+void Waste::OnRemovalCompleted(Pile::RemovalOperation operation)
+{
 }

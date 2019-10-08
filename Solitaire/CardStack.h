@@ -7,7 +7,7 @@ class CompositionCard;
 class CardStack : public Pile
 {
 public:
-    CardStack(std::shared_ptr<ShapeCache> const& shapeCache, std::vector<std::shared_ptr<CompositionCard>> cards) : Pile(shapeCache, cards) {}
+    CardStack(std::shared_ptr<ShapeCache> const& shapeCache, std::vector<std::shared_ptr<CompositionCard>> cards) : Pile(shapeCache, cards) { m_background.Comment(L"CardStack Root"); }
 
     void SetLayoutOptions(float verticalOffset);
 

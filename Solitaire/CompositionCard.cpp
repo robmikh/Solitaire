@@ -41,6 +41,8 @@ ShapeVisual BuildCardFront(
     pathShape.FillBrush(compositor.CreateColorBrush(color));
     shapeContainer.Shapes().Append(pathShape);
 
+    shapeVisual.Comment(card);
+
     return shapeVisual;
 }
 
@@ -54,6 +56,8 @@ ShapeVisual BuildCardBack(std::shared_ptr<ShapeCache> const& shapeCache)
     shapeVisual.RotationAxis({ 0, 1, 0 });
     shapeVisual.RotationAngleInDegrees(180);
 
+    shapeVisual.Comment(L"Card Back");
+
     return shapeVisual;
 }
 
@@ -66,10 +70,12 @@ CompositionCard::CompositionCard(
     m_card = card;
     m_root = compositor.CreateContainerVisual();
     m_root.Size(CardSize);
+    m_root.Comment(L"Card Root");
 
     m_sidesRoot = compositor.CreateContainerVisual();
     m_sidesRoot.RelativeSizeAdjustment({ 1, 1 });
     m_sidesRoot.RotationAxis({ 0, 1, 0 });
+    m_sidesRoot.Comment(L"Card Sides");
     m_root.Children().InsertAtTop(m_sidesRoot);
     m_front = BuildCardFront(
         shapeCache,

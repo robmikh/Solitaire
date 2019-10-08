@@ -24,8 +24,10 @@ Pile::ItemContainer CreateItemContainer(winrt::Compositor const& compositor)
 {
     auto root = compositor.CreateContainerVisual();
     root.Size(CompositionCard::CardSize);
+    root.Comment(L"Item Container Root");
     auto content = compositor.CreateContainerVisual();
     content.RelativeSizeAdjustment({ 1, 1 });
+    content.Comment(L"Item Container Content");
     root.Children().InsertAtTop(content);
     return { root, content };
 }

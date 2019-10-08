@@ -16,6 +16,7 @@ Deck::Deck(std::shared_ptr<ShapeCache> const& shapeCache, std::vector<std::share
     m_background = compositor.CreateShapeVisual();
     m_background.Shapes().Append(shapeCache->GetShape(ShapeType::Empty));
     m_background.Size(CompositionCard::CardSize);
+    m_background.Comment(L"Deck Root");
 }
 
 bool Deck::HitTest(float2 point)

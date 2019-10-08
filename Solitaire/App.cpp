@@ -89,15 +89,18 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
         m_shapeCache = std::make_shared<ShapeCache>(compositor);
         m_root = compositor.CreateContainerVisual();
         m_root.RelativeSizeAdjustment({ 1, 1 });
+        m_root.Comment(L"Application Root");
         m_target = compositor.CreateTargetForCurrentView();
         m_target.Root(m_root);
 
         m_boardLayer = compositor.CreateContainerVisual();
         m_boardLayer.RelativeSizeAdjustment({ 1, 1 });
+        m_boardLayer.Comment(L"Board Layer");
         m_root.Children().InsertAtTop(m_boardLayer);
 
         m_selectedLayer = compositor.CreateContainerVisual();
         m_selectedLayer.RelativeSizeAdjustment({ 1, 1 });
+        m_selectedLayer.Comment(L"Selection Layer");
         m_root.Children().InsertAtTop(m_selectedLayer);
 
         m_visuals = m_boardLayer.Children();
@@ -121,6 +124,7 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
         m_playAreaVisual.Offset({ 0, playAreaOffsetY, 0 });
         m_playAreaVisual.Size({ 0, -playAreaOffsetY });
         m_playAreaVisual.RelativeSizeAdjustment({ 1, 1 });
+        m_playAreaVisual.Comment(L"Play Area Root");
         m_visuals.InsertAtTop(m_playAreaVisual);
         auto playAreaVisuals = m_playAreaVisual.Children();
         auto cardsSoFar = 0;
@@ -165,6 +169,7 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
         m_wasteVisual = compositor.CreateContainerVisual();
         m_wasteVisual.Size({ (2.0f * 65.0f) + cardSize.x, cardSize.y });
         m_wasteVisual.Offset({ cardSize.x + 25.0f, 0, 0 });
+        m_wasteVisual.Comment(L"Waste Area Root");
         m_waste = std::make_shared<Waste>(m_shapeCache);
         m_waste->SetLayoutOptions(65.0f);
         m_waste->ForceLayout();
@@ -177,6 +182,7 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
         m_foundationVisual.Size({ 4.0f * cardSize.x + 3.0f * 15.0f, cardSize.y });
         m_foundationVisual.AnchorPoint({ 1, 0 });
         m_foundationVisual.RelativeOffsetAdjustment({ 1, 0, 0 });
+        m_foundationVisual.Comment(L"Foundations Root");
         m_visuals.InsertAtTop(m_foundationVisual);
         for (int i = 0; i < 4; i++)
         {
@@ -192,6 +198,7 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
         window.PointerMoved({ this, &App::OnPointerMoved });
         window.PointerReleased({ this, &App::OnPointerReleased });
         window.SizeChanged({ this, &App::OnSizeChanged });
+        window.KeyUp({ this, &App::OnKeyUp });
     }
 
     void OnPointerPressed(IInspectable const &, PointerEventArgs const & args)
@@ -441,6 +448,99 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
         auto playAreaOffsetY = m_playAreaVisual.Offset().y;
         m_zoneRects.insert({ HitTestZone::PlayArea, { 0, playAreaOffsetY, window.Bounds().Width, window.Bounds().Height - playAreaOffsetY } });
         m_zoneRects[HitTestZone::Foundations] = { window.Bounds().Width - m_foundationVisual.Size().x, 0, m_foundationVisual.Size().x, m_foundationVisual.Size().y };
+    }
+
+    void App::OnKeyUp(CoreWindow const& window, KeyEventArgs const& args)
+    {
+        if (args.VirtualKey() == Windows::System::VirtualKey::T)
+        {
+#ifdef _DEBUG
+            PrintTree();
+#endif
+        }
+    }
+
+    void PrintTree()
+    {
+        auto window = CoreWindow::GetForCurrentThread();
+        std::wstringstream stringStream;
+        stringStream << L"Window Size: " << window.Bounds().Width << L", " << window.Bounds().Height << std::endl;
+        PrintTree(m_root, stringStream, 0);
+        std::wstring token;
+        while (std::getline(stringStream, token))
+        {
+            OutputDebugStringW(token.c_str());
+            OutputDebugStringW(L"\n");
+        }
+    }
+
+    void PrintTree(Visual const& root, std::wstringstream& stream, int indent)
+    {
+        PrintVisual(root, stream, indent);
+        auto containerVisual = root.try_as<ContainerVisual>();
+        if (containerVisual)
+        {
+            if (containerVisual.Children().Count() > 0)
+            {
+                AddIndents(stream, indent + 1);
+                stream << L"Children:" << std::endl;
+                for (auto& child : containerVisual.Children())
+                {
+                    PrintTree(child, stream, indent + 2);
+                }
+            }
+        }
+    }
+
+    void PrintVisual(Visual const& visual, std::wstringstream& stream, int indent)
+    {
+        AddIndents(stream, indent);
+        auto name = visual.Comment();
+        if (name.empty())
+        {
+            name = L"(Nameless Visual)";
+        }
+        stream << name.c_str() << std::endl;
+        PrintProperty(L"Size: ", visual.Size(), { 0, 0 }, stream, indent + 1);
+        PrintProperty(L"RelativeSize: ", visual.RelativeSizeAdjustment(), { 0, 0 }, stream, indent + 1);
+        PrintProperty(L"Offset: ", visual.Offset(), { 0, 0, 0 }, stream, indent + 1);
+        PrintProperty(L"RelativeOffset: ", visual.RelativeOffsetAdjustment(), { 0, 0, 0 }, stream, indent + 1);
+    }
+    
+    template <typename T>
+    void PrintProperty(std::wstring const& propertyName, T const value, T const defaultValue, std::wstringstream& stream, int indent)
+    {
+        if (value != defaultValue)
+        {
+            PrintProperty(propertyName, value, stream, indent);
+        }
+    }
+
+    template <typename T>
+    void PrintProperty(std::wstring const& propertyName, T const value, std::wstringstream& stream, int indent)
+    {
+        AddIndents(stream, indent + 1);
+        stream << propertyName.c_str();
+        PrintValue(value, stream);
+        stream << std::endl;
+    }
+
+    void PrintValue(float2 const value, std::wstringstream& stream)
+    {
+        stream << L"{ " << value.x << L", " << value.y << L" }";
+    }
+
+    void PrintValue(float3 const value, std::wstringstream& stream)
+    {
+        stream << L"{ " << value.x << L", " << value.y << L", " << value.z << L" }";
+    }
+
+    void AddIndents(std::wstringstream& stream, int indent)
+    {
+        for (auto i = 0; i < indent; i++)
+        {
+            stream << L"    ";
+        }
     }
 };
 

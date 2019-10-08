@@ -7,7 +7,7 @@ class CompositionCard;
 class Waste : public Pile
 {
 public:
-    Waste(std::shared_ptr<ShapeCache> const& shapeCache) : Pile(shapeCache) {}
+    Waste(std::shared_ptr<ShapeCache> const& shapeCache) : Pile(shapeCache) { m_background.Comment(L"Waste Root"); }
 
     void SetLayoutOptions(float horizontalOffset);
     Pile::CardList Flush();

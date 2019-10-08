@@ -94,12 +94,17 @@ winrt::float3 Waste::ComputeBaseSpaceOffset(int index, int totalCards)
 
 void Waste::OnRemovalCompleted(Pile::RemovalOperation operation)
 {
+    auto numCardsFromBack = 3;
+    if (m_itemContainers.size() < numCardsFromBack)
+    {
+        numCardsFromBack = m_itemContainers.size();
+    }
     // Force the last three cards to be fanned out, regardless of layout
     auto count = 0;
-    for (auto container = m_itemContainers.rbegin(); container != m_itemContainers.rend() && count < 3; container++, count++)
+    for (auto container = m_itemContainers.rbegin(); container != m_itemContainers.rend() && count < numCardsFromBack; container++, count++)
     {
         // Since we're walking the list backwards, we have to flip the count
         // indexRelativeToEnd = (last index) - count
-        container->Root.Offset(ComputeOffset(3 - 1 - count, 3));
+        container->Root.Offset(ComputeOffset(numCardsFromBack - 1 - count, 3));
     }
 }

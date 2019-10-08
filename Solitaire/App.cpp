@@ -264,15 +264,7 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
                                 m_selectedCards = { card };
                                 m_lastOperation = operation;
                             }
-                            // The first visual in the list will have its offset updated by 
-                            // the pile. However, the pile only knows about its own transforms,
-                            // not the container's. Update the offset so the visual shows up
-                            // properly when added to the selection layer.
                             m_selectedVisual = m_selectedItemContainers.front().Root;
-                            auto offset = m_selectedVisual.Offset();
-                            offset.x += containerHitTestRect.X;
-                            offset.y += containerHitTestRect.Y;
-                            m_selectedVisual.Offset(offset);
                             m_lastHitTest = hitTestResult;
                         }
                     }

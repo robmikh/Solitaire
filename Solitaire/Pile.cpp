@@ -161,7 +161,10 @@ std::tuple<Pile::ItemContainerList, Pile::CardList, Pile::RemovalOperation> Pile
         cardIndex++;
     }
     
-    containers.front().Root.Offset(ComputeBaseSpaceOffset(index, startingSize) + m_background.Offset());
+    // We don't need to add an offset to the first container since we're 
+    // going to use ParentForTransform to put the it in the right place.
+    containers.front().Root.Offset({ 0, 0, 0 });
+    containers.front().Root.ParentForTransform(m_itemContainers[index].Root);
 
     return { containers, cards, { index } };
 }
@@ -183,14 +186,19 @@ std::tuple<Pile::ItemContainer, Pile::Card, Pile::RemovalOperation> Pile::Take(i
     auto newContainer = CreateItemContainer(compositor);
     newContainer.Content.Children().InsertAtTop(visualToRemove);
 
-    newContainer.Root.Offset(ComputeBaseSpaceOffset(index, startingSize) + m_background.Offset());
+    newContainer.Root.ParentForTransform(m_itemContainers[index].Root);
 
     return { newContainer, card, { index } };
 }
 
 void Pile::Add(Pile::CardList const& cards)
 {
-    //WINRT_ASSERT(CanAdd(cards));
+    WINRT_ASSERT(CanAdd(cards));
+    AddInternal(cards);
+}
+
+void Pile::AddInternal(Pile::CardList const& cards)
+{
     WINRT_ASSERT(m_itemContainers.size() == m_cards.size());
     if (cards.empty())
     {

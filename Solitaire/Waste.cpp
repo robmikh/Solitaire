@@ -46,7 +46,7 @@ void Waste::Discard(Pile::CardList const& cards)
     {
         container->Root.Offset({ 0, 0, 0 });
     }
-    Add(cards);
+    AddInternal(cards);
     // Force the last three cards to be fanned out, regardless of layout
     count = 0;
     for (auto container = m_itemContainers.rbegin(); container != m_itemContainers.rend() && count < 3; container++, count++)

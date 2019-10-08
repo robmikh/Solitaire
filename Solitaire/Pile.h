@@ -27,6 +27,7 @@ public:
 
     winrt::Windows::UI::Composition::Visual Base() { return m_background; }
     const Pile::CardList& Cards() const { return m_cards; }
+    const Pile::ItemContainerList& ItemContainers() const { return m_itemContainers; }
 
     enum class HitTestTarget
     {
@@ -62,9 +63,11 @@ protected:
     virtual winrt::Windows::Foundation::Numerics::float3 ComputeBaseSpaceOffset(int index, int totalCards) = 0;
     virtual void OnRemovalCompleted(Pile::RemovalOperation operation) = 0;
 
+    void AddInternal(Pile::CardList const& cards);
+
 protected:
     winrt::Windows::UI::Composition::ShapeVisual m_background{ nullptr };
     winrt::Windows::UI::Composition::VisualCollection m_children{ nullptr };
     Pile::CardList m_cards;
-    std::vector<ItemContainer> m_itemContainers;
+    Pile::ItemContainerList m_itemContainers;
 };

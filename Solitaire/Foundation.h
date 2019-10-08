@@ -7,7 +7,7 @@ class CompositionCard;
 class Foundation : public Pile
 {
 public:
-    Foundation(std::shared_ptr<ShapeCache> const& shapeCache) : Pile(shapeCache) { m_background.Comment(L"Foundation Root"); }
+    Foundation(std::shared_ptr<ShapeCache> const& shapeCache) : Pile(shapeCache) { m_background.Comment(L"Foundation Area Root"); }
 
     virtual bool CanSplit(int index) override;
     virtual bool CanTake(int index) override;

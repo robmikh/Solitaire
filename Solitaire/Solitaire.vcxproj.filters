@@ -23,6 +23,7 @@
     <ClInclude Include="Deck.h" />
     <ClInclude Include="Foundation.h" />
     <ClInclude Include="Pile.h" />
+    <ClInclude Include="DebugHelpers.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="Assets\Logo.scale-100.png">

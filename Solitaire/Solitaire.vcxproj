@@ -95,6 +95,7 @@
     <ClInclude Include="Card.h" />
     <ClInclude Include="CardStack.h" />
     <ClInclude Include="CompositionCard.h" />
+    <ClInclude Include="DebugHelpers.h" />
     <ClInclude Include="Deck.h" />
     <ClInclude Include="Foundation.h" />
     <ClInclude Include="Pack.h" />

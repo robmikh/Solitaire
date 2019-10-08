@@ -455,92 +455,17 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
         if (args.VirtualKey() == Windows::System::VirtualKey::T)
         {
 #ifdef _DEBUG
-            PrintTree();
+            PrintTree(window);
 #endif
         }
     }
 
-    void PrintTree()
+    void PrintTree(CoreWindow const& window)
     {
-        auto window = CoreWindow::GetForCurrentThread();
         std::wstringstream stringStream;
         stringStream << L"Window Size: " << window.Bounds().Width << L", " << window.Bounds().Height << std::endl;
-        PrintTree(m_root, stringStream, 0);
-        std::wstring token;
-        while (std::getline(stringStream, token))
-        {
-            OutputDebugStringW(token.c_str());
-            OutputDebugStringW(L"\n");
-        }
-    }
-
-    void PrintTree(Visual const& root, std::wstringstream& stream, int indent)
-    {
-        PrintVisual(root, stream, indent);
-        auto containerVisual = root.try_as<ContainerVisual>();
-        if (containerVisual)
-        {
-            if (containerVisual.Children().Count() > 0)
-            {
-                AddIndents(stream, indent + 1);
-                stream << L"Children:" << std::endl;
-                for (auto& child : containerVisual.Children())
-                {
-                    PrintTree(child, stream, indent + 2);
-                }
-            }
-        }
-    }
-
-    void PrintVisual(Visual const& visual, std::wstringstream& stream, int indent)
-    {
-        AddIndents(stream, indent);
-        auto name = visual.Comment();
-        if (name.empty())
-        {
-            name = L"(Nameless Visual)";
-        }
-        stream << name.c_str() << std::endl;
-        PrintProperty(L"Size: ", visual.Size(), { 0, 0 }, stream, indent + 1);
-        PrintProperty(L"RelativeSize: ", visual.RelativeSizeAdjustment(), { 0, 0 }, stream, indent + 1);
-        PrintProperty(L"Offset: ", visual.Offset(), { 0, 0, 0 }, stream, indent + 1);
-        PrintProperty(L"RelativeOffset: ", visual.RelativeOffsetAdjustment(), { 0, 0, 0 }, stream, indent + 1);
-    }
-    
-    template <typename T>
-    void PrintProperty(std::wstring const& propertyName, T const value, T const defaultValue, std::wstringstream& stream, int indent)
-    {
-        if (value != defaultValue)
-        {
-            PrintProperty(propertyName, value, stream, indent);
-        }
-    }
-
-    template <typename T>
-    void PrintProperty(std::wstring const& propertyName, T const value, std::wstringstream& stream, int indent)
-    {
-        AddIndents(stream, indent + 1);
-        stream << propertyName.c_str();
-        PrintValue(value, stream);
-        stream << std::endl;
-    }
-
-    void PrintValue(float2 const value, std::wstringstream& stream)
-    {
-        stream << L"{ " << value.x << L", " << value.y << L" }";
-    }
-
-    void PrintValue(float3 const value, std::wstringstream& stream)
-    {
-        stream << L"{ " << value.x << L", " << value.y << L", " << value.z << L" }";
-    }
-
-    void AddIndents(std::wstringstream& stream, int indent)
-    {
-        for (auto i = 0; i < indent; i++)
-        {
-            stream << L"    ";
-        }
+        Debug::PrintTree(m_root, stringStream, 0);
+        Debug::OutputDebugStringStream(stringStream);
     }
 };
 

@@ -11,6 +11,7 @@
     <ClCompile Include="Deck.cpp" />
     <ClCompile Include="Foundation.cpp" />
     <ClCompile Include="Pile.cpp" />
+    <ClCompile Include="Game.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
@@ -24,6 +25,7 @@
     <ClInclude Include="Foundation.h" />
     <ClInclude Include="Pile.h" />
     <ClInclude Include="DebugHelpers.h" />
+    <ClInclude Include="Game.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="Assets\Logo.scale-100.png">

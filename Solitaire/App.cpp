@@ -122,11 +122,12 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
     float2 GetPointRelativeToContent(float2 const windowSize, float2 const point)
     {
         auto transform = ComputeContentTransform(windowSize, m_content.Size());
-        auto temp = winrt::Windows::Foundation::Numerics::transform(point, transform);
-        auto temp2 = float4x4::identity();
-        invert(transform, &temp2);
-        auto temp3 = winrt::Windows::Foundation::Numerics::transform(point, temp2);
-        return temp3;
+        auto interse = float4x4::identity();
+        if (invert(transform, &interse))
+        {
+            return winrt::Windows::Foundation::Numerics::transform(point, interse);
+        }
+        return { -1, -1 };
     }
 
     void OnPointerPressed(CoreWindow const& window, PointerEventArgs const & args)

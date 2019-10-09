@@ -591,13 +591,12 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
         {
             return;
         }
+        const auto isControlDown = (window.GetKeyState(VirtualKey::Control) & CoreVirtualKeyStates::Down) == CoreVirtualKeyStates::Down;
 
         auto key = args.VirtualKey();
-        if (key == VirtualKey::T)
+        if (key == VirtualKey::T && isControlDown)
         {
-#ifdef _DEBUG
             PrintTree(window);
-#endif
         }
         else if (key == VirtualKey::Up)
         {
@@ -623,12 +622,9 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
             layout.WasteHorizontalOffset += 5.0f;
             SetNewLayout(layout);
         }
-        else if (key == VirtualKey::N)
+        else if (key == VirtualKey::N && isControlDown)
         {
-            if ((window.GetKeyState(VirtualKey::Control) & CoreVirtualKeyStates::Down) == CoreVirtualKeyStates::Down)
-            {
-                NewGame();
-            }
+            NewGame();
         }
     }
 

@@ -20,6 +20,8 @@ public:
     void IsFaceUp(bool isFaceUp);
     void Flip() { IsFaceUp(!m_isFaceUp); }
 
+    void AnimateIsFaceUp(bool isFaceUp, winrt::Windows::Foundation::TimeSpan const& duration, winrt::Windows::Foundation::TimeSpan const& delayTime);
+
 private:
     winrt::Windows::UI::Composition::ContainerVisual m_root{ nullptr };
     winrt::Windows::UI::Composition::ContainerVisual m_sidesRoot{ nullptr };

@@ -55,7 +55,7 @@ std::vector<std::shared_ptr<CompositionCard>> Deck::Draw()
         for (auto& card : cards)
         {
             m_background.Children().Remove(card->Root());
-            card->IsFaceUp(true);
+            //card->IsFaceUp(true);
         }
 
         return cards;

@@ -30,6 +30,7 @@ enum class HitTestZone
 
 struct App : implements<App, IFrameworkViewSource, IFrameworkView>
 {
+    Compositor m_compositor{ nullptr };
     CompositionTarget m_target{ nullptr };
     ContainerVisual m_root{ nullptr };
     ContainerVisual m_boardLayer{ nullptr };
@@ -47,6 +48,8 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
     std::shared_ptr<Pile> m_lastPile;
     Pile::HitTestResult m_lastHitTest;
     float2 m_offset{};
+
+    bool m_isDeckAnimationRunning = false;
 
     std::shared_ptr<ShapeCache> m_shapeCache;
     std::unique_ptr<Pack> m_pack;
@@ -82,23 +85,39 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
         dispatcher.ProcessEvents(CoreProcessEventsOption::ProcessUntilQuit);
     }
 
+    float4x4 ComputePerspectiveMatrix(float2 const windowSize)
+    {
+        auto depth = 500.0f;
+        float4x4 const projectionMatrix = { 1, 0, 0, 0,
+                                            0, 1, 0, 0,
+                                            0, 0, 1, -1 * (1 / depth),
+                                            0, 0, 0, 1 };
+        auto perspectiveMatrix = make_float4x4_translation({ windowSize / -2.0f, 0 }) *
+                                 projectionMatrix *
+                                 make_float4x4_translation({ windowSize / 2.0f, 0 });
+        return perspectiveMatrix;
+    }
+
     void SetWindow(CoreWindow const & window)
     {
-        Compositor compositor;
+        float2 const windowSize = { window.Bounds().Width, window.Bounds().Height };
+
+        m_compositor = Compositor();
         // Base visual tree
-        m_shapeCache = std::make_shared<ShapeCache>(compositor);
-        m_root = compositor.CreateContainerVisual();
+        m_shapeCache = std::make_shared<ShapeCache>(m_compositor);
+        m_root = m_compositor.CreateContainerVisual();
         m_root.RelativeSizeAdjustment({ 1, 1 });
+        m_root.TransformMatrix(ComputePerspectiveMatrix(windowSize));
         m_root.Comment(L"Application Root");
-        m_target = compositor.CreateTargetForCurrentView();
+        m_target = m_compositor.CreateTargetForCurrentView();
         m_target.Root(m_root);
 
-        m_boardLayer = compositor.CreateContainerVisual();
+        m_boardLayer = m_compositor.CreateContainerVisual();
         m_boardLayer.RelativeSizeAdjustment({ 1, 1 });
         m_boardLayer.Comment(L"Board Layer");
         m_root.Children().InsertAtTop(m_boardLayer);
 
-        m_selectedLayer = compositor.CreateContainerVisual();
+        m_selectedLayer = m_compositor.CreateContainerVisual();
         m_selectedLayer.RelativeSizeAdjustment({ 1, 1 });
         m_selectedLayer.Comment(L"Selection Layer");
         m_root.Children().InsertAtTop(m_selectedLayer);
@@ -120,7 +139,7 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
 
         // Play Area
         auto playAreaOffsetY = cardSize.y + 25.0f;
-        m_playAreaVisual = compositor.CreateContainerVisual();
+        m_playAreaVisual = m_compositor.CreateContainerVisual();
         m_playAreaVisual.Offset({ 0, playAreaOffsetY, 0 });
         m_playAreaVisual.Size({ 0, -playAreaOffsetY });
         m_playAreaVisual.RelativeSizeAdjustment({ 1, 1 });
@@ -159,14 +178,18 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
         m_zoneRects.insert({ HitTestZone::PlayArea, { 0, playAreaOffsetY, window.Bounds().Width, window.Bounds().Height - playAreaOffsetY } });
 
         // Deck
+        m_deckVisual = m_compositor.CreateContainerVisual();
+        m_deckVisual.Size(CompositionCard::CardSize);
+        m_deckVisual.Comment(L"Deck Area Root");
+        m_visuals.InsertAtTop(m_deckVisual);
         std::vector<std::shared_ptr<CompositionCard>> deck(cards.begin() + cardsSoFar, cards.end());
         m_deck = std::make_unique<Deck>(m_shapeCache, deck);
         m_deck->ForceLayout();
-        m_visuals.InsertAtTop(m_deck->Base());
+        m_deckVisual.Children().InsertAtTop(m_deck->Base());
         m_zoneRects.insert({ HitTestZone::Deck, { 0, 0, cardSize.x, cardSize.y } });
 
         // Waste
-        m_wasteVisual = compositor.CreateContainerVisual();
+        m_wasteVisual = m_compositor.CreateContainerVisual();
         m_wasteVisual.Size({ (2.0f * 65.0f) + cardSize.x, cardSize.y });
         m_wasteVisual.Offset({ cardSize.x + 25.0f, 0, 0 });
         m_wasteVisual.Comment(L"Waste Area Root");
@@ -178,7 +201,7 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
         m_zoneRects.insert({ HitTestZone::Waste, { cardSize.x + 25.0f, 0, (2.0f * 65.0f) + cardSize.x, cardSize.y } });
 
         // Foundation
-        m_foundationVisual = compositor.CreateContainerVisual();
+        m_foundationVisual = m_compositor.CreateContainerVisual();
         m_foundationVisual.Size({ 4.0f * cardSize.x + 3.0f * 15.0f, cardSize.y });
         m_foundationVisual.AnchorPoint({ 1, 0 });
         m_foundationVisual.RelativeOffsetAdjustment({ 1, 0, 0 });
@@ -204,6 +227,10 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
     void OnPointerPressed(IInspectable const &, PointerEventArgs const & args)
     {
         float2 const point = args.CurrentPoint().Position();
+        if (m_isDeckAnimationRunning)
+        {
+            return;
+        }
 
         for (auto& pair : m_zoneRects)
         {
@@ -225,8 +252,53 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
 
                         if (!cards.empty())
                         {
-                            m_waste->Discard(cards);
-                            //m_waste->ForceLayout(65.0f);
+                            auto batch = m_compositor.CreateScopedBatch(CompositionBatchTypes::Animation);
+
+                            auto count = 0;
+                            for (auto& card : cards)
+                            {
+                                auto visual = card->Root();
+                                m_visuals.InsertAtTop(visual);
+                                
+                                auto duration = std::chrono::milliseconds(250);
+                                auto delayTime = std::chrono::milliseconds(50 * count);
+
+                                // TODO: Sync this up with the deck visual's actual position (transform parent?)
+                                auto xAnimation = m_compositor.CreateScalarKeyFrameAnimation();
+                                xAnimation.InsertKeyFrame(0, 0);
+                                xAnimation.InsertKeyFrame(1, CompositionCard::CardSize.x + 25.0f + count * 65.0f);
+                                xAnimation.IterationBehavior(AnimationIterationBehavior::Count);
+                                xAnimation.IterationCount(1);
+                                xAnimation.Duration(duration);
+                                xAnimation.DelayTime(delayTime);
+                                visual.StartAnimation(L"Offset.X", xAnimation);
+
+                                auto zAnimation = m_compositor.CreateScalarKeyFrameAnimation();
+                                zAnimation.InsertKeyFrame(0, 0);
+                                zAnimation.InsertKeyFrame(0.5f, 10.0f);
+                                zAnimation.InsertKeyFrame(1, 0);
+                                zAnimation.IterationBehavior(AnimationIterationBehavior::Count);
+                                zAnimation.IterationCount(1);
+                                zAnimation.Duration(duration);
+                                zAnimation.DelayTime(delayTime);
+                                visual.StartAnimation(L"Offset.Z", zAnimation);
+
+                                card->AnimateIsFaceUp(true, duration, delayTime);
+
+                                count++;
+                            }
+
+                            batch.Completed([=](auto&& ...)
+                            {
+                                for (auto& card : cards)
+                                {
+                                    m_visuals.Remove(card->Root());
+                                }
+                                m_waste->Discard(cards);
+                                m_isDeckAnimationRunning = false;
+                            });
+                            m_isDeckAnimationRunning = true;
+                            batch.End();
                         }
                         else
                         {
@@ -375,6 +447,11 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
 
     void OnPointerReleased(IInspectable const&, PointerEventArgs const& args)
     {
+        if (m_isDeckAnimationRunning)
+        {
+            return;
+        }
+
         if (m_selectedVisual)
         {
             float2 const point = args.CurrentPoint().Position();
@@ -437,8 +514,11 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
 
     void App::OnSizeChanged(CoreWindow const& window, WindowSizeChangedEventArgs const& args)
     {
+        float2 const windowSize = { window.Bounds().Width, window.Bounds().Height };
+        m_root.TransformMatrix(ComputePerspectiveMatrix(windowSize));
+
         auto playAreaOffsetY = m_playAreaVisual.Offset().y;
-        m_zoneRects.insert({ HitTestZone::PlayArea, { 0, playAreaOffsetY, window.Bounds().Width, window.Bounds().Height - playAreaOffsetY } });
+        m_zoneRects.insert({ HitTestZone::PlayArea, { 0, playAreaOffsetY, windowSize.x, windowSize.y - playAreaOffsetY } });
         m_zoneRects[HitTestZone::Foundations] = { window.Bounds().Width - m_foundationVisual.Size().x, 0, m_foundationVisual.Size().x, m_foundationVisual.Size().y };
     }
 

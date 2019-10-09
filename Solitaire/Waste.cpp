@@ -55,6 +55,7 @@ void Waste::Discard(Pile::CardList const& cards)
         // indexRelativeToEnd = (last index) - count
         container->Root.Offset(ComputeOffset(3 - 1 - count, 3));
     }
+    WINRT_ASSERT(count == 3);
 }
 
 bool Waste::CanTake(int index)

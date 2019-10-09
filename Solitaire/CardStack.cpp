@@ -86,6 +86,6 @@ void CardStack::OnRemovalCompleted(Pile::RemovalOperation operation)
     if (!m_cards.empty())
     {
         auto card = m_cards.back();
-        card->IsFaceUp(true);
+        card->AnimateIsFaceUp(true, std::chrono::milliseconds(250), std::chrono::milliseconds(0));
     }
 }

@@ -14,6 +14,7 @@ using namespace Windows;
 using namespace Windows::ApplicationModel::Core;
 using namespace Windows::Foundation;
 using namespace Windows::Foundation::Numerics;
+using namespace Windows::System;
 using namespace Windows::UI;
 using namespace Windows::UI::Core;
 using namespace Windows::UI::Composition;
@@ -117,18 +118,9 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
 
         m_visuals = m_boardLayer.Children();
 
-        // Init cards
-        m_pack = std::make_unique<Pack>(m_shapeCache);
-#ifdef _DEBUG
-        m_pack->Shuffle({ 1318857190, 1541316502, 3202618166, 965450609 });
-        //m_pack->Shuffle();
-#else
-        m_pack->Shuffle();
-#endif
-        auto cards = m_pack->Cards();
+        // Get layout info
         auto textHeight = m_shapeCache->TextHeight();
         m_layoutInfo.CardStackVerticalOffset = textHeight;
-
         const auto cardSize = CompositionCard::CardSize;
 
         // Play Area
@@ -139,7 +131,74 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
         m_playAreaVisual.RelativeSizeAdjustment({ 1, 1 });
         m_playAreaVisual.Comment(L"Play Area Root");
         m_visuals.InsertAtTop(m_playAreaVisual);
+        m_zoneRects.insert({ HitTestZone::PlayArea, { 0, playAreaOffsetY, window.Bounds().Width, window.Bounds().Height - playAreaOffsetY } });
+
+        // Deck
+        m_deckVisual = m_compositor.CreateContainerVisual();
+        m_deckVisual.Size(CompositionCard::CardSize);
+        m_deckVisual.Comment(L"Deck Area Root");
+        m_visuals.InsertAtTop(m_deckVisual);
+        m_zoneRects.insert({ HitTestZone::Deck, { 0, 0, cardSize.x, cardSize.y } });
+
+        // Waste
+        m_wasteVisual = m_compositor.CreateContainerVisual();
+        m_wasteVisual.Size({ (2.0f * m_layoutInfo.WasteHorizontalOffset) + cardSize.x, cardSize.y });
+        m_wasteVisual.Offset({ cardSize.x + 25.0f, 0, 0 });
+        m_wasteVisual.Comment(L"Waste Area Root");
+        m_visuals.InsertAtTop(m_wasteVisual);
+        m_zoneRects.insert({ HitTestZone::Waste, { cardSize.x + 25.0f, 0, (2.0f * m_layoutInfo.WasteHorizontalOffset) + cardSize.x, cardSize.y } });
+
+        // Foundation
+        m_foundationVisual = m_compositor.CreateContainerVisual();
+        m_foundationVisual.Size({ 4.0f * cardSize.x + 3.0f * 15.0f, cardSize.y });
+        m_foundationVisual.AnchorPoint({ 1, 0 });
+        m_foundationVisual.RelativeOffsetAdjustment({ 1, 0, 0 });
+        m_foundationVisual.Comment(L"Foundations Root");
+        m_visuals.InsertAtTop(m_foundationVisual);
+        m_zoneRects.insert({ HitTestZone::Foundations, { window.Bounds().Width - m_foundationVisual.Size().x, 0, m_foundationVisual.Size().x, m_foundationVisual.Size().y } });
+
+        NewGame();
+
+        window.PointerPressed({ this, &App::OnPointerPressed });
+        window.PointerMoved({ this, &App::OnPointerMoved });
+        window.PointerReleased({ this, &App::OnPointerReleased });
+        window.SizeChanged({ this, &App::OnSizeChanged });
+        window.KeyUp({ this, &App::OnKeyUp });
+    }
+
+    void NewGame()
+    {
+        m_pack = std::make_unique<Pack>(m_shapeCache);
+#ifdef _DEBUG
+        m_pack->Shuffle({ 1318857190, 1541316502, 3202618166, 965450609 });
+        //m_pack->Shuffle();
+#else
+        m_pack->Shuffle();
+#endif
+        auto cards = m_pack->Cards();
+
+        auto [stacks, numCardsUsed] = ConstructStacks(cards);
+        m_stacks = stacks;
+        m_deck = ConstructDeck(cards, numCardsUsed);
+        m_waste = ConstructWaste();
+        m_foundations = ConstructFoundations();
+
+        m_selectedLayer.Children().RemoveAll();
+        m_selectedVisual = nullptr;
+        m_selectedCards.clear();
+        m_selectedItemContainers.clear();
+        m_lastOperation = Pile::RemovalOperation();
+        m_lastPile = nullptr;
+        m_lastHitTest = Pile::HitTestResult();
+    }
+
+    std::pair<std::vector<std::shared_ptr<CardStack>>, int> ConstructStacks(Pile::CardList const& cards)
+    {
+        const auto cardSize = CompositionCard::CardSize;
+
+        std::vector<std::shared_ptr<CardStack>> stacks;
         auto playAreaVisuals = m_playAreaVisual.Children();
+        playAreaVisuals.RemoveAll();
         auto cardsSoFar = 0;
         auto numberOfStacks = 7;
         for (int i = 0; i < numberOfStacks; i++)
@@ -158,9 +217,9 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
             baseVisual.Offset({ (float)i * (cardSize.x + 15.0f), 0, 0 });
             playAreaVisuals.InsertAtTop(baseVisual);
 
-            m_stacks.push_back(stack);
+            stacks.push_back(stack);
         }
-        for (auto& stack : m_stacks)
+        for (auto& stack : stacks)
         {
             auto cards = stack->Cards();
             for (auto& card : cards)
@@ -169,53 +228,44 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
             }
             cards.back()->IsFaceUp(true);
         }
-        m_zoneRects.insert({ HitTestZone::PlayArea, { 0, playAreaOffsetY, window.Bounds().Width, window.Bounds().Height - playAreaOffsetY } });
+        return { stacks, cardsSoFar };
+    }
 
-        // Deck
-        m_deckVisual = m_compositor.CreateContainerVisual();
-        m_deckVisual.Size(CompositionCard::CardSize);
-        m_deckVisual.Comment(L"Deck Area Root");
-        m_visuals.InsertAtTop(m_deckVisual);
-        std::vector<std::shared_ptr<CompositionCard>> deck(cards.begin() + cardsSoFar, cards.end());
-        m_deck = std::make_unique<Deck>(m_shapeCache, deck);
-        m_deck->ForceLayout();
-        m_deckVisual.Children().InsertAtTop(m_deck->Base());
-        m_zoneRects.insert({ HitTestZone::Deck, { 0, 0, cardSize.x, cardSize.y } });
+    std::unique_ptr<Deck> ConstructDeck(Pile::CardList const& cards, int startAt)
+    {
+        std::vector<std::shared_ptr<CompositionCard>> deck(cards.begin() + startAt, cards.end());
+        auto result = std::make_unique<Deck>(m_shapeCache, deck);
+        result->ForceLayout();
+        m_deckVisual.Children().RemoveAll();
+        m_deckVisual.Children().InsertAtTop(result->Base());
+        return result;
+    }
 
-        // Waste
-        m_wasteVisual = m_compositor.CreateContainerVisual();
-        m_wasteVisual.Size({ (2.0f * m_layoutInfo.WasteHorizontalOffset) + cardSize.x, cardSize.y });
-        m_wasteVisual.Offset({ cardSize.x + 25.0f, 0, 0 });
-        m_wasteVisual.Comment(L"Waste Area Root");
-        m_waste = std::make_shared<Waste>(m_shapeCache);
-        m_waste->SetLayoutOptions(m_layoutInfo.WasteHorizontalOffset);
-        m_waste->ForceLayout();
-        m_wasteVisual.Children().InsertAtTop(m_waste->Base());
-        m_visuals.InsertAtTop(m_wasteVisual);
-        m_zoneRects.insert({ HitTestZone::Waste, { cardSize.x + 25.0f, 0, (2.0f * m_layoutInfo.WasteHorizontalOffset) + cardSize.x, cardSize.y } });
+    std::shared_ptr<Waste> ConstructWaste()
+    {
+        auto waste = std::make_shared<Waste>(m_shapeCache);
+        waste->SetLayoutOptions(m_layoutInfo.WasteHorizontalOffset);
+        waste->ForceLayout();
+        m_wasteVisual.Children().RemoveAll();
+        m_wasteVisual.Children().InsertAtTop(waste->Base());
+        return waste;
+    }
 
-        // Foundation
-        m_foundationVisual = m_compositor.CreateContainerVisual();
-        m_foundationVisual.Size({ 4.0f * cardSize.x + 3.0f * 15.0f, cardSize.y });
-        m_foundationVisual.AnchorPoint({ 1, 0 });
-        m_foundationVisual.RelativeOffsetAdjustment({ 1, 0, 0 });
-        m_foundationVisual.Comment(L"Foundations Root");
-        m_visuals.InsertAtTop(m_foundationVisual);
+    std::vector<std::shared_ptr<::Foundation>> ConstructFoundations()
+    {
+        const auto cardSize = CompositionCard::CardSize;
+
+        std::vector<std::shared_ptr<::Foundation>> foundations;
+        m_foundationVisual.Children().RemoveAll();
         for (int i = 0; i < 4; i++)
         {
             auto foundation = std::make_shared<::Foundation>(m_shapeCache);
             auto visual = foundation->Base();
-            visual.Offset({i * (cardSize.x + 15.0f), 0, 0 });
+            visual.Offset({ i * (cardSize.x + 15.0f), 0, 0 });
             m_foundationVisual.Children().InsertAtTop(visual);
-            m_foundations.push_back(foundation);
+            foundations.push_back(foundation);
         }
-        m_zoneRects.insert({ HitTestZone::Foundations, { window.Bounds().Width - m_foundationVisual.Size().x, 0, m_foundationVisual.Size().x, m_foundationVisual.Size().y } });
-
-        window.PointerPressed({ this, &App::OnPointerPressed });
-        window.PointerMoved({ this, &App::OnPointerMoved });
-        window.PointerReleased({ this, &App::OnPointerReleased });
-        window.SizeChanged({ this, &App::OnSizeChanged });
-        window.KeyUp({ this, &App::OnKeyUp });
+        return foundations;
     }
 
     void OnPointerPressed(IInspectable const &, PointerEventArgs const & args)
@@ -536,36 +586,49 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
 
     void App::OnKeyUp(CoreWindow const& window, KeyEventArgs const& args)
     {
+        // If an animation is going, ignore the key
+        if (m_isDeckAnimationRunning)
+        {
+            return;
+        }
+
         auto key = args.VirtualKey();
-        if (key == Windows::System::VirtualKey::T)
+        if (key == VirtualKey::T)
         {
 #ifdef _DEBUG
             PrintTree(window);
 #endif
         }
-        else if (key == Windows::System::VirtualKey::Up)
+        else if (key == VirtualKey::Up)
         {
             auto layout = m_layoutInfo;
             layout.CardStackVerticalOffset -= 5.0f;
             SetNewLayout(layout);
         }
-        else if (key == Windows::System::VirtualKey::Down)
+        else if (key == VirtualKey::Down)
         {
             auto layout = m_layoutInfo;
             layout.CardStackVerticalOffset += 5.0f;
             SetNewLayout(layout);
         }
-        else if (key == Windows::System::VirtualKey::Left)
+        else if (key == VirtualKey::Left)
         {
             auto layout = m_layoutInfo;
             layout.WasteHorizontalOffset -= 5.0f;
             SetNewLayout(layout);
         }
-        else if (key == Windows::System::VirtualKey::Right)
+        else if (key == VirtualKey::Right)
         {
             auto layout = m_layoutInfo;
             layout.WasteHorizontalOffset += 5.0f;
             SetNewLayout(layout);
+        }
+        else if (key == VirtualKey::N)
+        {
+            if ((window.GetKeyState(VirtualKey::Control) & CoreVirtualKeyStates::Down) == CoreVirtualKeyStates::Down)
+            {
+                NewGame();
+            }
         }
     }
 

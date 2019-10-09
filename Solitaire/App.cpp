@@ -28,6 +28,7 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
     ContainerVisual m_root{ nullptr };
 
     std::unique_ptr<Game> m_game;
+    ContainerVisual m_content{ nullptr };
 
     IFrameworkView CreateView()
     {
@@ -68,8 +69,16 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
         m_target = m_compositor.CreateTargetForCurrentView();
         m_target.Root(m_root);
 
-        m_game = std::make_unique<Game>(m_compositor, windowSize);
-        m_root.Children().InsertAtTop(m_game->Root());
+        m_content = m_compositor.CreateContainerVisual();
+        m_content.Size({ 1327, 1111 });
+        m_content.AnchorPoint({ 0.5f, 0.5f });
+        m_content.RelativeOffsetAdjustment({ 0.5f, 0.5f, 0.0f });
+        auto scale = ComputeScaleFactor(windowSize, m_content.Size());
+        m_content.Scale({ scale, scale, 1.0f });
+        m_root.Children().InsertAtTop(m_content);
+        
+        m_game = std::make_unique<Game>(m_compositor, m_content.Size());
+        m_content.Children().InsertAtTop(m_game->Root());
 
         window.PointerPressed({ this, &App::OnPointerPressed });
         window.PointerMoved({ this, &App::OnPointerMoved });
@@ -78,28 +87,78 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
         window.KeyUp({ this, &App::OnKeyUp });
     }
 
-    void OnPointerPressed(IInspectable const &, PointerEventArgs const & args)
+    float ComputeScaleFactor(float2 const windowSize, float2 const contentSize)
     {
-        float2 const point = args.CurrentPoint().Position();
-        m_game->OnPointerPressed(point);
+        auto diffX = contentSize.x - windowSize.x;
+        auto diffY = contentSize.y - windowSize.y;
+
+        auto scaleX = windowSize.x / contentSize.x;
+        auto scaleY = windowSize.y / contentSize.y;
+
+        float scaleFactor = scaleY;
+
+        if (diffX > diffY)
+        {
+            scaleFactor = scaleX;
+        }
+
+        return scaleFactor;
     }
 
-    void OnPointerMoved(IInspectable const &, PointerEventArgs const & args)
+    float4x4 ComputeContentTransform(float2 const windowSize, float2 const contentSize)
     {
-        float2 const point = args.CurrentPoint().Position();
-        m_game->OnPointerMoved(point);
+        auto result = float4x4::identity();
+        float2 const anchorPoint = { 0.5f, 0.5f };
+        auto scale = ComputeScaleFactor(windowSize, contentSize);
+
+        result *=
+            make_float4x4_translation({ -1.0f * anchorPoint *contentSize, 0 }) *
+            make_float4x4_scale({ scale, scale, 1.0f }) *
+            make_float4x4_translation({ windowSize / 2.0f, 0 });
+
+        return result;
     }
 
-    void OnPointerReleased(IInspectable const&, PointerEventArgs const& args)
+    float2 GetPointRelativeToContent(float2 const windowSize, float2 const point)
+    {
+        auto transform = ComputeContentTransform(windowSize, m_content.Size());
+        auto temp = winrt::Windows::Foundation::Numerics::transform(point, transform);
+        auto temp2 = float4x4::identity();
+        invert(transform, &temp2);
+        auto temp3 = winrt::Windows::Foundation::Numerics::transform(point, temp2);
+        return temp3;
+    }
+
+    void OnPointerPressed(CoreWindow const& window, PointerEventArgs const & args)
     {
         float2 const point = args.CurrentPoint().Position();
-        m_game->OnPointerReleased(point);
+        float2 const windowSize = { window.Bounds().Width, window.Bounds().Height };
+        auto relativePoint = GetPointRelativeToContent(windowSize, point);
+        m_game->OnPointerPressed(relativePoint);
+    }
+
+    void OnPointerMoved(CoreWindow const& window, PointerEventArgs const & args)
+    {
+        float2 const point = args.CurrentPoint().Position();
+        float2 const windowSize = { window.Bounds().Width, window.Bounds().Height };
+        auto relativePoint = GetPointRelativeToContent(windowSize, point);
+        m_game->OnPointerMoved(relativePoint);
+    }
+
+    void OnPointerReleased(CoreWindow const& window, PointerEventArgs const& args)
+    {
+        float2 const point = args.CurrentPoint().Position();
+        float2 const windowSize = { window.Bounds().Width, window.Bounds().Height };
+        auto relativePoint = GetPointRelativeToContent(windowSize, point);
+        m_game->OnPointerReleased(relativePoint);
     }
 
     void App::OnSizeChanged(CoreWindow const& window, WindowSizeChangedEventArgs const& args)
     {
         float2 const windowSize = { window.Bounds().Width, window.Bounds().Height };
-        m_game->OnSizeChanged(windowSize);
+        auto scale = ComputeScaleFactor(windowSize, m_content.Size());
+        m_content.Scale({ scale, scale, 1.0f });
+        m_game->OnSizeChanged(m_content.Size());
     }
 
     void App::OnKeyUp(CoreWindow const& window, KeyEventArgs const& args)

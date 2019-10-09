@@ -19,6 +19,12 @@ using namespace Windows::UI::Core;
 using namespace Windows::UI::Composition;
 using namespace Windows::UI::Popups;
 
+struct LayoutInformation
+{
+    float CardStackVerticalOffset = 47.88f;
+    float WasteHorizontalOffset = 65.0f;
+};
+
 enum class HitTestZone
 {
     None,
@@ -50,6 +56,7 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
     float2 m_offset{};
 
     bool m_isDeckAnimationRunning = false;
+    LayoutInformation m_layoutInfo{};
 
     std::shared_ptr<ShapeCache> m_shapeCache;
     std::unique_ptr<Pack> m_pack;
@@ -120,6 +127,7 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
 #endif
         auto cards = m_pack->Cards();
         auto textHeight = m_shapeCache->TextHeight();
+        m_layoutInfo.CardStackVerticalOffset = textHeight;
 
         const auto cardSize = CompositionCard::CardSize;
 
@@ -143,7 +151,7 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
             cardsSoFar += numberOfCards;
 
             auto stack = std::make_shared<CardStack>(m_shapeCache, tempStack);
-            stack->SetLayoutOptions(textHeight);
+            stack->SetLayoutOptions(m_layoutInfo.CardStackVerticalOffset);
             stack->ForceLayout();
             auto baseVisual = stack->Base();
 
@@ -176,15 +184,15 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
 
         // Waste
         m_wasteVisual = m_compositor.CreateContainerVisual();
-        m_wasteVisual.Size({ (2.0f * 65.0f) + cardSize.x, cardSize.y });
+        m_wasteVisual.Size({ (2.0f * m_layoutInfo.WasteHorizontalOffset) + cardSize.x, cardSize.y });
         m_wasteVisual.Offset({ cardSize.x + 25.0f, 0, 0 });
         m_wasteVisual.Comment(L"Waste Area Root");
         m_waste = std::make_shared<Waste>(m_shapeCache);
-        m_waste->SetLayoutOptions(65.0f);
+        m_waste->SetLayoutOptions(m_layoutInfo.WasteHorizontalOffset);
         m_waste->ForceLayout();
         m_wasteVisual.Children().InsertAtTop(m_waste->Base());
         m_visuals.InsertAtTop(m_wasteVisual);
-        m_zoneRects.insert({ HitTestZone::Waste, { cardSize.x + 25.0f, 0, (2.0f * 65.0f) + cardSize.x, cardSize.y } });
+        m_zoneRects.insert({ HitTestZone::Waste, { cardSize.x + 25.0f, 0, (2.0f * m_layoutInfo.WasteHorizontalOffset) + cardSize.x, cardSize.y } });
 
         // Foundation
         m_foundationVisual = m_compositor.CreateContainerVisual();
@@ -238,6 +246,12 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
 
                         if (!cards.empty())
                         {
+                            // Compute difference between the two zones
+                            auto deckZoneRect = m_zoneRects[HitTestZone::Deck];
+                            auto wasteZoneRect = m_zoneRects[HitTestZone::Waste];
+                            auto dX = wasteZoneRect.X - deckZoneRect.X;
+                            auto dy = wasteZoneRect.Y - deckZoneRect.Y;
+
                             auto batch = m_compositor.CreateScopedBatch(CompositionBatchTypes::Animation);
 
                             auto count = 0;
@@ -252,7 +266,7 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
                                 // TODO: Sync this up with the deck visual's actual position (transform parent?)
                                 auto xAnimation = m_compositor.CreateScalarKeyFrameAnimation();
                                 xAnimation.InsertKeyFrame(0, 0);
-                                xAnimation.InsertKeyFrame(1, CompositionCard::CardSize.x + 25.0f + count * 65.0f);
+                                xAnimation.InsertKeyFrame(1, CompositionCard::CardSize.x + 25.0f + count * m_layoutInfo.WasteHorizontalOffset);
                                 xAnimation.IterationBehavior(AnimationIterationBehavior::Count);
                                 xAnimation.IterationCount(1);
                                 xAnimation.Duration(duration);
@@ -506,13 +520,52 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
         m_zoneRects[HitTestZone::Foundations] = { window.Bounds().Width - m_foundationVisual.Size().x, 0, m_foundationVisual.Size().x, m_foundationVisual.Size().y };
     }
 
+    void SetNewLayout(LayoutInformation layoutInfo)
+    {
+        m_layoutInfo = layoutInfo;
+        m_waste->SetLayoutOptions(m_layoutInfo.WasteHorizontalOffset);
+        m_waste->ForceLayout();
+        for (auto& stack : m_stacks)
+        {
+            stack->SetLayoutOptions(m_layoutInfo.CardStackVerticalOffset);
+            stack->ForceLayout();
+        }
+        auto cardSize = CompositionCard::CardSize;
+        m_zoneRects[HitTestZone::Waste] = { cardSize.x + 25.0f, 0, (2.0f * m_layoutInfo.WasteHorizontalOffset) + cardSize.x, cardSize.y };
+    }
+
     void App::OnKeyUp(CoreWindow const& window, KeyEventArgs const& args)
     {
-        if (args.VirtualKey() == Windows::System::VirtualKey::T)
+        auto key = args.VirtualKey();
+        if (key == Windows::System::VirtualKey::T)
         {
 #ifdef _DEBUG
             PrintTree(window);
 #endif
+        }
+        else if (key == Windows::System::VirtualKey::Up)
+        {
+            auto layout = m_layoutInfo;
+            layout.CardStackVerticalOffset -= 5.0f;
+            SetNewLayout(layout);
+        }
+        else if (key == Windows::System::VirtualKey::Down)
+        {
+            auto layout = m_layoutInfo;
+            layout.CardStackVerticalOffset += 5.0f;
+            SetNewLayout(layout);
+        }
+        else if (key == Windows::System::VirtualKey::Left)
+        {
+            auto layout = m_layoutInfo;
+            layout.WasteHorizontalOffset -= 5.0f;
+            SetNewLayout(layout);
+        }
+        else if (key == Windows::System::VirtualKey::Right)
+        {
+            auto layout = m_layoutInfo;
+            layout.WasteHorizontalOffset += 5.0f;
+            SetNewLayout(layout);
         }
     }
 

@@ -86,9 +86,14 @@ winrt::float3 Waste::ComputeOffset(int index, int totalCards)
 winrt::float3 Waste::ComputeBaseSpaceOffset(int index, int totalCards)
 {
     WINRT_ASSERT(index < totalCards);
-    if (index > totalCards - 3)
+    auto numCardsToFan = 3;
+    if (totalCards < numCardsToFan)
     {
-        return { (index - (totalCards - 3)) * m_horizontalOffset, 0, 0 };
+        numCardsToFan = totalCards;
+    }
+    if (index > totalCards - numCardsToFan)
+    {
+        return { (index - (totalCards - numCardsToFan)) * m_horizontalOffset, 0, 0 };
     }
     return { 0, 0, 0 };
 }

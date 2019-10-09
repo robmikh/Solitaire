@@ -447,6 +447,7 @@ winrt::fire_and_forget Game::DisplayWinMessage()
 {
     auto dialog = winrt::MessageDialog(L"You won!");
     co_await dialog.ShowAsync();
+    NewGame();
 }
 
 void Game::SetNewLayout(LayoutInformation layoutInfo)

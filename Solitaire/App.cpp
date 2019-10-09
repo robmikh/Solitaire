@@ -25,7 +25,7 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
 {
     Compositor m_compositor{ nullptr };
     CompositionTarget m_target{ nullptr };
-    ContainerVisual m_root{ nullptr };
+    SpriteVisual m_root{ nullptr };
 
     std::unique_ptr<Game> m_game;
     ContainerVisual m_content{ nullptr };
@@ -63,8 +63,9 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
         m_compositor = Compositor();
 
         // Base visual tree
-        m_root = m_compositor.CreateContainerVisual();
+        m_root = m_compositor.CreateSpriteVisual();
         m_root.RelativeSizeAdjustment({ 1, 1 });
+        m_root.Brush(m_compositor.CreateColorBrush({ 255, 70, 70, 70 })); // ARGB
         m_root.Comment(L"Application Root");
         m_target = m_compositor.CreateTargetForCurrentView();
         m_target.Root(m_root);

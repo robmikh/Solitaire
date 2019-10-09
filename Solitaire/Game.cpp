@@ -119,8 +119,8 @@ void Game::NewGame()
 {
     m_pack = std::make_unique<Pack>(m_shapeCache);
 #ifdef _DEBUG
-    m_pack->Shuffle({ 1318857190, 1541316502, 3202618166, 965450609 });
-    //m_pack->Shuffle();
+    //m_pack->Shuffle({ 1318857190, 1541316502, 3202618166, 965450609 });
+    m_pack->Shuffle();
 #else
     m_pack->Shuffle();
 #endif

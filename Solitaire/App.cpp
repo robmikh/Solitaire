@@ -85,19 +85,6 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
         dispatcher.ProcessEvents(CoreProcessEventsOption::ProcessUntilQuit);
     }
 
-    float4x4 ComputePerspectiveMatrix(float2 const windowSize)
-    {
-        auto depth = 500.0f;
-        float4x4 const projectionMatrix = { 1, 0, 0, 0,
-                                            0, 1, 0, 0,
-                                            0, 0, 1, -1 * (1 / depth),
-                                            0, 0, 0, 1 };
-        auto perspectiveMatrix = make_float4x4_translation({ windowSize / -2.0f, 0 }) *
-                                 projectionMatrix *
-                                 make_float4x4_translation({ windowSize / 2.0f, 0 });
-        return perspectiveMatrix;
-    }
-
     void SetWindow(CoreWindow const & window)
     {
         float2 const windowSize = { window.Bounds().Width, window.Bounds().Height };
@@ -107,7 +94,6 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
         m_shapeCache = std::make_shared<ShapeCache>(m_compositor);
         m_root = m_compositor.CreateContainerVisual();
         m_root.RelativeSizeAdjustment({ 1, 1 });
-        m_root.TransformMatrix(ComputePerspectiveMatrix(windowSize));
         m_root.Comment(L"Application Root");
         m_target = m_compositor.CreateTargetForCurrentView();
         m_target.Root(m_root);
@@ -515,8 +501,6 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
     void App::OnSizeChanged(CoreWindow const& window, WindowSizeChangedEventArgs const& args)
     {
         float2 const windowSize = { window.Bounds().Width, window.Bounds().Height };
-        m_root.TransformMatrix(ComputePerspectiveMatrix(windowSize));
-
         auto playAreaOffsetY = m_playAreaVisual.Offset().y;
         m_zoneRects.insert({ HitTestZone::PlayArea, { 0, playAreaOffsetY, windowSize.x, windowSize.y - playAreaOffsetY } });
         m_zoneRects[HitTestZone::Foundations] = { window.Bounds().Width - m_foundationVisual.Size().x, 0, m_foundationVisual.Size().x, m_foundationVisual.Size().y };

@@ -132,6 +132,7 @@ Pile::HitTestResult Pile::HitTest(winrt::float2 point)
 std::tuple<Pile::ItemContainerList, Pile::CardList, Pile::RemovalOperation> Pile::Split(int index)
 {
     WINRT_ASSERT(CanSplit(index));
+    WINRT_ASSERT(m_itemContainers.size() == m_cards.size());
 
     auto startingSize = m_cards.size();
 
@@ -172,6 +173,7 @@ std::tuple<Pile::ItemContainerList, Pile::CardList, Pile::RemovalOperation> Pile
 std::tuple<Pile::ItemContainer, Pile::Card, Pile::RemovalOperation> Pile::Take(int index)
 {
     WINRT_ASSERT(CanTake(index));
+    WINRT_ASSERT(m_itemContainers.size() == m_cards.size());
 
     auto startingSize = m_cards.size();
 
@@ -244,14 +246,20 @@ void Pile::Return(Pile::CardList const& cards, Pile::RemovalOperation operation)
 
     auto index = operation.Index;
     auto returnedCardIndex = 0;
-    for (auto container = m_itemContainers.begin() + index; container != m_itemContainers.begin() + index + cards.size(); container++)
+    for (
+        auto container = m_itemContainers.begin() + operation.Index; 
+        container != m_itemContainers.begin() + operation.Index + cards.size(); 
+        container++)
     {
         auto cardVisual = cards[returnedCardIndex]->Root();
         cardVisual.Offset({ 0, 0, 0 });
         container->Content.Children().InsertAtTop(cardVisual);
         m_cards.insert(m_cards.begin() + index, cards[returnedCardIndex]);
         returnedCardIndex++;
+        index++;
     }
+
+    WINRT_ASSERT(m_itemContainers.size() == m_cards.size());
 }
 
 void Pile::CompleteRemoval(Pile::RemovalOperation operation)
@@ -299,5 +307,6 @@ void Pile::CompleteRemoval(Pile::RemovalOperation operation)
         }
     }
 
+    WINRT_ASSERT(m_itemContainers.size() == m_cards.size());
     OnRemovalCompleted(operation);
 }

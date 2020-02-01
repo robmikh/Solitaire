@@ -39,7 +39,7 @@ winrt::ShapeVisual BuildCardFront(
 
     auto pathGeometry = shapeCache->GetPathGeometry(card);
     auto pathShape = compositor.CreateSpriteShape(pathGeometry);
-    pathShape.Offset({ 5, 0 });
+    pathShape.Offset({ 8, 15 });
     pathShape.FillBrush(compositor.CreateColorBrush(color));
     shapeContainer.Shapes().Append(pathShape);
 

@@ -19,10 +19,7 @@ public:
 
 private:
 
-    void FillCache(
-        winrt::Windows::UI::Composition::Compositor const& compositor,
-        winrt::hstring const& fontFamily,
-        float fontSize);
+    void FillCache(winrt::Windows::UI::Composition::Compositor const& compositor);
 
 private:
     winrt::Windows::UI::Composition::Compositor m_compositor;

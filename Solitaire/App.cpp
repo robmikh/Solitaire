@@ -90,17 +90,13 @@ struct App : implements<App, IFrameworkViewSource, IFrameworkView>
 
     float ComputeScaleFactor(float2 const windowSize, float2 const contentSize)
     {
-        auto diffX = contentSize.x - windowSize.x;
-        auto diffY = contentSize.y - windowSize.y;
+        auto windowRatio = windowSize.x / windowSize.y;
+        auto contentRatio = contentSize.x / contentSize.y;
 
-        auto scaleX = windowSize.x / contentSize.x;
-        auto scaleY = windowSize.y / contentSize.y;
-
-        float scaleFactor = scaleY;
-
-        if (diffX > diffY)
+        auto scaleFactor = windowSize.x / contentSize.x;
+        if (windowRatio > contentRatio)
         {
-            scaleFactor = scaleX;
+            scaleFactor = windowSize.y / contentSize.y;
         }
 
         return scaleFactor;

@@ -56,7 +56,7 @@ Game::Game(winrt::Compositor const& compositor, winrt::float2 const hostSize)
 {
     m_compositor = compositor;
     // Base visual tree
-    m_shapeCache = std::make_shared<ShapeCache>(m_compositor);
+    m_shapeCache = ShapeCache::CreateAsync(m_compositor).get();
     m_root = m_compositor.CreateContainerVisual();
     m_root.RelativeSizeAdjustment({ 1, 1 });
     m_root.Comment(L"Game Root");

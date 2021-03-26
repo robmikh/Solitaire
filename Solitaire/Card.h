@@ -31,9 +31,9 @@ struct Card
     Card(Face face, Suit suit) : m_face(face), m_suit(suit) {}
     ~Card() {}
 
-    Face Face() { return m_face; }
-    Suit Suit() { return m_suit; }
-    winrt::hstring ToString()
+    Face Face() const { return m_face; }
+    Suit Suit() const { return m_suit; }
+    winrt::hstring ToString() const
     {
         winrt::hstring result;
         switch (m_face)
@@ -95,9 +95,13 @@ struct Card
         }
         return result;
     }
-    bool IsRed() { return (int)m_suit % 2 == 0; }
+    bool IsRed() const { return (int)m_suit % 2 == 0; }
 
-    bool operator==(const Card& other) { return m_face == other.m_face && m_suit == other.m_suit; }
+    bool operator==(Card const& other) const { return m_face == other.m_face && m_suit == other.m_suit; }
+    bool operator<(Card const& other) const
+    {
+        return m_suit == other.m_suit ? m_face < other.m_face : m_suit < other.m_suit;
+    }
 
 private:
     ::Face m_face;

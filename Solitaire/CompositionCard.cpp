@@ -18,7 +18,7 @@ const winrt::float2 CompositionCard::CardSize = { 175, 250 };
 
 winrt::ShapeVisual BuildCardFront(
     std::shared_ptr<ShapeCache> const& shapeCache,
-    winrt::hstring const& card,
+    Card const& card,
     winrt::Color const& color)
 {
     auto compositor = shapeCache->Compositor();
@@ -43,7 +43,7 @@ winrt::ShapeVisual BuildCardFront(
     pathShape.FillBrush(compositor.CreateColorBrush(color));
     shapeContainer.Shapes().Append(pathShape);
 
-    shapeVisual.Comment(card);
+    shapeVisual.Comment(card.ToString());
 
     return shapeVisual;
 }
@@ -83,7 +83,7 @@ CompositionCard::CompositionCard(
     m_root.Children().InsertAtTop(m_sidesRoot);
     m_front = BuildCardFront(
         shapeCache,
-        card.ToString(),
+        card,
         card.IsRed() ? winrt::Colors::Crimson() : winrt::Colors::Black());
     m_sidesRoot.Children().InsertAtTop(m_front);
     m_back = BuildCardBack(shapeCache);

@@ -10,7 +10,7 @@ namespace winrt
     using namespace Microsoft::Graphics::Canvas::Svg;
 }
 
-winrt::ShapeVisual SvgShapesBuilder::ConvertSvgDocumentToCompositionShapes(
+SvgCompositionShapes SvgShapesBuilder::ConvertSvgDocumentToCompositionShapes(
     winrt::Compositor const& compositor, 
     winrt::CanvasSvgDocument const& document)
 {
@@ -23,44 +23,17 @@ winrt::ShapeVisual SvgShapesBuilder::ConvertSvgDocumentToCompositionShapes(
     auto rootElement = document.Root();
     WINRT_VERIFY(rootElement.Tag() == L"svg");
 
+    winrt::CompositionViewBox viewBox{ nullptr };
+
     if (rootElement.IsAttributeSpecified(L"viewBox"))
     {
         auto rect = rootElement.GetRectangleAttribute(L"viewBox");
-        auto viewBox = compositor.CreateViewBox();
+        viewBox = compositor.CreateViewBox();
         viewBox.Size({ rect.Width, rect.Height });
         viewBox.Offset({ rect.X, rect.Y });
-        rootVisual.ViewBox(viewBox);
     }
-
-    winrt::float3 offset = {};
-    winrt::float2 size = {};
-
-    if (rootElement.IsAttributeSpecified(L"width"))
-    {
-        auto value = rootElement.GetFloatAttribute(L"width");
-        size.x = value;
-    }
-    if (rootElement.IsAttributeSpecified(L"height"))
-    {
-        auto value = rootElement.GetFloatAttribute(L"height");
-        size.y = value;
-    }
-    if (rootElement.IsAttributeSpecified(L"x"))
-    {
-        auto value = rootElement.GetFloatAttribute(L"x");
-        offset.x = value;
-    }
-    if (rootElement.IsAttributeSpecified(L"y"))
-    {
-        auto value = rootElement.GetFloatAttribute(L"y");
-        offset.y = value;
-    }
-
-    rootVisual.Offset(offset);
-    rootVisual.Size(size);
 
     auto container = compositor.CreateContainerShape();
-    rootVisual.Shapes().Append(container);
     std::stack<Presentation> presentationStack;
     presentationStack.push(Presentation
         {
@@ -76,7 +49,7 @@ winrt::ShapeVisual SvgShapesBuilder::ConvertSvgDocumentToCompositionShapes(
         child = rootElement.GetNextSibling(child);
     }
 
-    return rootVisual;
+    return { viewBox, container };
 }
 
 void SvgShapesBuilder::ProcessSvgElement(

@@ -28,20 +28,9 @@ winrt::ShapeVisual BuildCardFront(
     shapeVisual.Size(CompositionCard::CardSize);
     shapeVisual.BackfaceVisibility(winrt::CompositionBackfaceVisibility::Hidden);
 
-    auto roundedRectGeometry = compositor.CreateRoundedRectangleGeometry();
-    roundedRectGeometry.CornerRadius({ 10, 10 });
-    roundedRectGeometry.Size(CompositionCard::CardSize);
-    auto rectShape = compositor.CreateSpriteShape(roundedRectGeometry);
-    rectShape.StrokeBrush(compositor.CreateColorBrush(winrt::Colors::Gray()));
-    rectShape.FillBrush(compositor.CreateColorBrush(winrt::Colors::White()));
-    rectShape.StrokeThickness(2);
-    shapeContainer.Shapes().Append(rectShape);
-
-    auto pathGeometry = shapeCache->GetPathGeometry(card);
-    auto pathShape = compositor.CreateSpriteShape(pathGeometry);
-    pathShape.Offset({ 5, 0 });
-    pathShape.FillBrush(compositor.CreateColorBrush(color));
-    shapeContainer.Shapes().Append(pathShape);
+    auto shapeInfo = shapeCache->GetCardFace(card);
+    shapeContainer.Shapes().Append(shapeInfo.RootShape);
+    shapeVisual.ViewBox(shapeInfo.ViewBox);
 
     shapeVisual.Comment(card.ToString());
 

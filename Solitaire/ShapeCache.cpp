@@ -2,6 +2,7 @@
 #include "ShapeCache.h"
 #include "Card.h"
 #include "CompositionCard.h"
+#include "SvgShapesBuilder.h"
 
 namespace winrt
 {
@@ -9,12 +10,15 @@ namespace winrt
     using namespace Windows::ApplicationModel::Core;
     using namespace Windows::Foundation;
     using namespace Windows::Foundation::Numerics;
+    using namespace Windows::Storage;
+    using namespace Windows::Storage::Streams;
     using namespace Windows::UI;
     using namespace Windows::UI::Core;
     using namespace Windows::UI::Composition;
 
     using namespace Microsoft::Graphics::Canvas;
     using namespace Microsoft::Graphics::Canvas::Geometry;
+    using namespace Microsoft::Graphics::Canvas::Svg;
     using namespace Microsoft::Graphics::Canvas::Text;
 }
 
@@ -24,11 +28,11 @@ std::future<std::shared_ptr<ShapeCache>> ShapeCache::CreateAsync(
     winrt::Compositor const& compositor)
 {
     auto cache = std::make_shared<ShapeCache>();
-    co_await cache->FillCacheAsync(compositor, L"Segoe UI", 36);
+    co_await cache->FillCacheAsync(compositor);
     co_return cache;
 }
 
-winrt::CompositionPathGeometry ShapeCache::GetPathGeometry(
+SvgCompositionShapes ShapeCache::GetCardFace(
     Card const& key)
 {
     return m_geometryCache.at(key);
@@ -40,9 +44,7 @@ winrt::CompositionShape ShapeCache::GetShape(ShapeType shapeType)
 }
 
 winrt::IAsyncAction ShapeCache::FillCacheAsync(
-    winrt::Compositor const& compositor,
-    winrt::hstring const& fontFamily,
-    float fontSize)
+    winrt::Compositor const& compositor)
 {
     std::vector<Card> cards;
     for (auto i = 0; i < (int)Face::King; i++)
@@ -58,29 +60,16 @@ winrt::IAsyncAction ShapeCache::FillCacheAsync(
 
     auto device = winrt::CanvasDevice();
     m_geometryCache.clear();
-    auto height = -1.0f;
+    auto height = 34.0f; // TODO: I guess this should be hardcoded now, get the right number later
     for (auto& card : cards)
     {
         auto filePath = GetSvgFilePath(card);
+        auto file = co_await winrt::StorageFile::GetFileFromApplicationUriAsync(winrt::Uri(filePath));
+        auto stream = co_await file.OpenReadAsync();
+        auto document = co_await winrt::CanvasSvgDocument::LoadAsync(device, stream);
+        auto shapeInfo = SvgShapesBuilder::ConvertSvgDocumentToCompositionShapes(compositor, document);
 
-
-
-        auto textFormat = winrt::CanvasTextFormat();
-        textFormat.FontFamily(fontFamily);
-        textFormat.FontSize(fontSize);
-        auto textLayout = winrt::CanvasTextLayout(device, card.ToString(), textFormat, 500, 0);
-        auto geometry = winrt::CanvasGeometry::CreateText(textLayout);
-
-        auto compositionPath = winrt::CompositionPath(geometry);
-        auto pathGeoemtry = compositor.CreatePathGeometry(compositionPath);
-
-        m_geometryCache.emplace(card, pathGeoemtry);
-
-        if (height < 0)
-        {
-            height = textLayout.LayoutBounds().Height;
-        }
-        WINRT_ASSERT(height == textLayout.LayoutBounds().Height);
+        m_geometryCache.emplace(card, shapeInfo);
     }
 
     m_shapeCache.clear();
@@ -147,7 +136,7 @@ std::wstring GetSvgFilePath(Card const& card)
     switch (card.Face())
     {
     case Face::Ace:
-        fileName << L"A";
+        fileName << L"ace";
         break;
     case Face::Two:
         fileName << L"2";
@@ -190,7 +179,7 @@ std::wstring GetSvgFilePath(Card const& card)
     switch (card.Suit())
     {
     case Suit::Diamond:
-        fileName << L"diamond";
+        fileName << L"diamonds";
         break;
     case Suit::Spade:
         fileName << L"spades";

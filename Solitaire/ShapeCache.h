@@ -1,5 +1,6 @@
 #pragma once
 #include "Card.h"
+#include "SvgShapesBuilder.h"
 
 enum class ShapeType
 {
@@ -14,7 +15,7 @@ public:
     ~ShapeCache() {}
 
     winrt::Windows::UI::Composition::Compositor Compositor() { return m_compositor; }
-    winrt::Windows::UI::Composition::CompositionPathGeometry GetPathGeometry(Card const& key);
+    SvgCompositionShapes GetCardFace(Card const& key);
     winrt::Windows::UI::Composition::CompositionShape GetShape(ShapeType shapeType);
     float TextHeight() { return m_textHeight; }
 
@@ -23,13 +24,11 @@ public:
 
 private:
     winrt::Windows::Foundation::IAsyncAction FillCacheAsync(
-        winrt::Windows::UI::Composition::Compositor const& compositor,
-        winrt::hstring const& fontFamily,
-        float fontSize);
+        winrt::Windows::UI::Composition::Compositor const& compositor);
 
 private:
     winrt::Windows::UI::Composition::Compositor m_compositor;
-    std::map<Card, winrt::Windows::UI::Composition::CompositionPathGeometry> m_geometryCache;
+    std::map<Card, SvgCompositionShapes> m_geometryCache;
     std::map<ShapeType, winrt::Windows::UI::Composition::CompositionShape> m_shapeCache;
     float m_textHeight;
 };

@@ -54,9 +54,15 @@ struct App : winrt::implements<App, winrt::IFrameworkViewSource, winrt::IFramewo
     void Run()
     {
         winrt::CoreWindow window = winrt::CoreWindow::GetForCurrentThread();
-        window.Activate();
+        //window.Activate();
 
         winrt::CoreDispatcher dispatcher = window.Dispatcher();
+
+        // Load assets
+        dispatcher.RunAsync(winrt::CoreDispatcherPriority::Normal, [=]() -> winrt::fire_and_forget
+            {
+                co_await InitializeAsync(window);
+            });
         dispatcher.ProcessEvents(winrt::CoreProcessEventsOption::ProcessUntilQuit);
     }
 
@@ -81,33 +87,6 @@ struct App : winrt::implements<App, winrt::IFrameworkViewSource, winrt::IFramewo
         auto scale = ComputeScaleFactor(windowSize, m_content.Size());
         m_content.Scale({ scale, scale, 1.0f });
         m_root.Children().InsertAtTop(m_content);
-        
-        m_game = std::make_unique<Game>(m_compositor, m_content.Size());
-        m_content.Children().InsertAtTop(m_game->Root());
-
-        window.PointerPressed({ this, &App::OnPointerPressed });
-        window.PointerMoved({ this, &App::OnPointerMoved });
-        window.PointerReleased({ this, &App::OnPointerReleased });
-        window.SizeChanged({ this, &App::OnSizeChanged });
-        window.KeyUp({ this, &App::OnKeyUp });
-
-        // DEBUG: Svg card rendering
-        auto dispatcher = window.Dispatcher();
-        dispatcher.RunAsync(winrt::CoreDispatcherPriority::Normal, [=]() -> winrt::fire_and_forget
-            {
-                auto root = m_root;
-                auto compositor = m_compositor;
-                auto device = winrt::Microsoft::Graphics::Canvas::CanvasDevice();
-
-                auto file = co_await winrt::Windows::Storage::StorageFile::GetFileFromApplicationUriAsync(winrt::Uri(L"ms-appx:///Assets/CardFaces/2_of_spades.svg"));
-                {
-                    auto stream = co_await file.OpenReadAsync();
-                    auto document = co_await winrt::Microsoft::Graphics::Canvas::Svg::CanvasSvgDocument::LoadAsync(device, stream);
-
-                    auto visual = SvgShapesBuilder::ConvertSvgDocumentToCompositionShapes(compositor, document);
-                    root.Children().InsertAtTop(visual);
-                }
-            });
     }
 
     float ComputeScaleFactor(winrt::float2 const windowSize, winrt::float2 const contentSize)
@@ -233,6 +212,27 @@ struct App : winrt::implements<App, winrt::IFrameworkViewSource, winrt::IFramewo
         stringStream << L"Window Size: " << window.Bounds().Width << L", " << window.Bounds().Height << std::endl;
         Debug::PrintTree(m_root, stringStream, 0);
         Debug::OutputDebugStringStream(stringStream);
+    }
+
+    winrt::IAsyncAction InitializeAsync(winrt::CoreWindow const& window)
+    {
+        auto tempWindow = window;
+        auto temp = this;
+        auto dispatcher = window.Dispatcher();
+        auto shapeCache = co_await ShapeCache::CreateAsync(m_compositor);
+        co_await dispatcher;
+        auto size = m_content.Size();
+        m_game = std::make_unique<Game>(m_compositor, size, shapeCache);
+        m_content.Children().InsertAtTop(m_game->Root());
+
+        tempWindow.PointerPressed({ temp, &App::OnPointerPressed });
+        tempWindow.PointerMoved({ temp, &App::OnPointerMoved });
+        tempWindow.PointerReleased({ temp, &App::OnPointerReleased });
+        tempWindow.SizeChanged({ temp, &App::OnSizeChanged });
+        tempWindow.KeyUp({ temp, &App::OnKeyUp });
+
+        tempWindow.Activate();
+        co_return;
     }
 };
 

@@ -52,11 +52,14 @@ std::pair<Pile::HitTestResult, std::shared_ptr<PileType>> HitTestPiles(
     return { Pile::HitTestResult(), nullptr };
 }
 
-Game::Game(winrt::Compositor const& compositor, winrt::float2 const hostSize)
+Game::Game(
+    winrt::Compositor const& compositor, 
+    winrt::float2 const hostSize,
+    std::shared_ptr<ShapeCache> const& shapeCache)
 {
     m_compositor = compositor;
+    m_shapeCache = shapeCache;
     // Base visual tree
-    m_shapeCache = ShapeCache::CreateAsync(m_compositor).get();
     m_root = m_compositor.CreateContainerVisual();
     m_root.RelativeSizeAdjustment({ 1, 1 });
     m_root.Comment(L"Game Root");

@@ -1,9 +1,15 @@
 #pragma once
 
+struct SvgCompositionShapes
+{
+    winrt::Windows::UI::Composition::CompositionViewBox ViewBox;
+    winrt::Windows::UI::Composition::CompositionContainerShape RootShape;
+};
+
 class SvgShapesBuilder 
 {
 public:
-    static winrt::Windows::UI::Composition::ShapeVisual ConvertSvgDocumentToCompositionShapes(
+    static SvgCompositionShapes ConvertSvgDocumentToCompositionShapes(
         winrt::Windows::UI::Composition::Compositor const& compositor,
         winrt::Microsoft::Graphics::Canvas::Svg::CanvasSvgDocument const& document);
 

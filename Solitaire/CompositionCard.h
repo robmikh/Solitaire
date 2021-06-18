@@ -6,6 +6,7 @@ class CompositionCard
 {
 public:
     static const winrt::Windows::Foundation::Numerics::float2 CardSize;
+    static const winrt::Windows::Foundation::Numerics::float2 CornerRadius;
 
     CompositionCard(
         Card card,

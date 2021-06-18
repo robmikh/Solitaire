@@ -14,7 +14,8 @@ namespace winrt
     using namespace Windows::UI::Composition;
 }
 
-const winrt::float2 CompositionCard::CardSize = { 175, 250 };
+const winrt::float2 CompositionCard::CardSize = { 167, 243 };
+const winrt::float2 CompositionCard::CornerRadius = { 9.5f, 9.5f };
 
 winrt::ShapeVisual BuildCardFront(
     std::shared_ptr<ShapeCache> const& shapeCache,

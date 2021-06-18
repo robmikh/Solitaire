@@ -23,6 +23,13 @@ namespace winrt
 }
 
 std::wstring GetSvgFilePath(Card const& card);
+winrt::CompositionSpriteShape BuildRoundedRectShape(
+    winrt::Compositor const& compositor,
+    winrt::float2 const& size,
+    winrt::float2 const& cornerRadius,
+    float strokeThickness,
+    winrt::CompositionBrush const& strokeBrush,
+    winrt::CompositionBrush const& fillBrush);
 
 std::future<std::shared_ptr<ShapeCache>> ShapeCache::CreateAsync(
     winrt::Compositor const& compositor)
@@ -77,23 +84,24 @@ winrt::IAsyncAction ShapeCache::FillCacheAsync(
         auto shapeContainer = compositor.CreateContainerShape();
         auto backgroundBaseColor = winrt::Colors::Blue();
 
-        auto roundedRectGeometry = compositor.CreateRoundedRectangleGeometry();
-        roundedRectGeometry.CornerRadius({ 10, 10 });
-        roundedRectGeometry.Size(CompositionCard::CardSize);
-        auto rectShape = compositor.CreateSpriteShape(roundedRectGeometry);
-        rectShape.StrokeBrush(compositor.CreateColorBrush(winrt::Colors::Gray()));
-        rectShape.FillBrush(compositor.CreateColorBrush(backgroundBaseColor));
-        rectShape.StrokeThickness(2);
+        auto rectShape = BuildRoundedRectShape(
+            compositor, 
+            CompositionCard::CardSize, 
+            CompositionCard::CornerRadius,
+            0.5f, 
+            compositor.CreateColorBrush(winrt::Colors::Black()), 
+            compositor.CreateColorBrush(backgroundBaseColor));
         shapeContainer.Shapes().Append(rectShape);
 
         winrt::float2 innerOffset{ 12, 12 };
-        auto innerRoundedRectGeometry = compositor.CreateRoundedRectangleGeometry();
-        innerRoundedRectGeometry.CornerRadius({ 6, 6 });
-        innerRoundedRectGeometry.Size(CompositionCard::CardSize - innerOffset);
-        auto innerRectShape = compositor.CreateSpriteShape(innerRoundedRectGeometry);
-        innerRectShape.StrokeBrush(compositor.CreateColorBrush(winrt::Colors::White()));
-        innerRectShape.StrokeThickness(5);
-        innerRectShape.Offset(innerOffset / 2.0f);
+        auto innerRectShape = BuildRoundedRectShape(
+            compositor,
+            CompositionCard::CardSize - innerOffset,
+            CompositionCard::CornerRadius,
+            5,
+            compositor.CreateColorBrush(winrt::Colors::White()),
+            compositor.CreateColorBrush(backgroundBaseColor));
+        innerRectShape.Offset(innerRectShape.Offset() + (innerOffset / 2.0f));
         shapeContainer.Shapes().Append(innerRectShape);
 
         m_shapeCache.emplace(ShapeType::Back, shapeContainer);
@@ -103,17 +111,18 @@ winrt::IAsyncAction ShapeCache::FillCacheAsync(
         auto shapeContainer = compositor.CreateContainerShape();
         auto backgroundBaseColor = winrt::Colors::Blue();
 
-        auto roundedRectGeometry = compositor.CreateRoundedRectangleGeometry();
-        roundedRectGeometry.CornerRadius({ 10, 10 });
-        roundedRectGeometry.Size(CompositionCard::CardSize);
-        auto rectShape = compositor.CreateSpriteShape(roundedRectGeometry);
-        rectShape.StrokeBrush(compositor.CreateColorBrush(winrt::Colors::Gray()));
-        rectShape.StrokeThickness(5);
+        auto rectShape = BuildRoundedRectShape(
+            compositor,
+            CompositionCard::CardSize,
+            CompositionCard::CornerRadius,
+            5,
+            compositor.CreateColorBrush(winrt::Colors::Gray()),
+            nullptr);
         shapeContainer.Shapes().Append(rectShape);
 
         winrt::float2 innerSize{ CompositionCard::CardSize / 2.0f };
         auto innerRoundedRectGeometry = compositor.CreateRoundedRectangleGeometry();
-        innerRoundedRectGeometry.CornerRadius({ 6, 6 });
+        innerRoundedRectGeometry.CornerRadius(CompositionCard::CornerRadius);
         innerRoundedRectGeometry.Size(innerSize);
         auto innerRectShape = compositor.CreateSpriteShape(innerRoundedRectGeometry);
         innerRectShape.FillBrush(compositor.CreateColorBrush(winrt::Colors::Gray()));
@@ -193,4 +202,25 @@ std::wstring GetSvgFilePath(Card const& card)
     }
     fileName << L".svg";
     return fileName.str();
+}
+
+winrt::CompositionSpriteShape BuildRoundedRectShape(
+    winrt::Compositor const& compositor,
+    winrt::float2 const& size,
+    winrt::float2 const& cornerRadius,
+    float strokeThickness,
+    winrt::CompositionBrush const& strokeBrush,
+    winrt::CompositionBrush const& fillBrush)
+{
+    winrt::float2 strokeAddedSize{ strokeThickness, strokeThickness };
+    auto strokeOffset = strokeAddedSize / 2.0f;
+    auto roundedRectGeometry = compositor.CreateRoundedRectangleGeometry();
+    roundedRectGeometry.CornerRadius(cornerRadius);
+    roundedRectGeometry.Size(size - strokeAddedSize);
+    auto rectShape = compositor.CreateSpriteShape(roundedRectGeometry);
+    rectShape.StrokeBrush(strokeBrush);
+    rectShape.FillBrush(fillBrush);
+    rectShape.StrokeThickness(strokeThickness);
+    rectShape.Offset(strokeOffset);
+    return rectShape;
 }

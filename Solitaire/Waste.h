@@ -13,7 +13,7 @@ public:
     Pile::CardList Flush();
     void Discard(Pile::CardList const& cards);
 
-    virtual bool CanSplit(int index) override { return false; }
+    virtual bool CanSplit(int) override { return false; }
     virtual bool CanTake(int index) override;
     virtual bool CanAdd(Pile::CardList const& cards) override;
 

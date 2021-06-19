@@ -75,7 +75,10 @@ struct App : winrt::implements<App, winrt::IFrameworkViewSource, winrt::IFramewo
         // Base visual tree
         m_root = m_compositor.CreateSpriteVisual();
         m_root.RelativeSizeAdjustment({ 1, 1 });
-        m_root.Brush(m_compositor.CreateColorBrush({ 255, 70, 70, 70 })); // ARGB
+        auto backgroundBrush = m_compositor.CreateRadialGradientBrush();
+        backgroundBrush.ColorStops().Append(m_compositor.CreateColorGradientStop(0.0f, { 255, 14, 144, 58 })); // ARGB
+        backgroundBrush.ColorStops().Append(m_compositor.CreateColorGradientStop(1.0f, { 255, 7, 69, 32 }));
+        m_root.Brush(backgroundBrush);
         m_root.Comment(L"Application Root");
         m_target = m_compositor.CreateTargetForCurrentView();
         m_target.Root(m_root);
@@ -152,7 +155,7 @@ struct App : winrt::implements<App, winrt::IFrameworkViewSource, winrt::IFramewo
         m_game->OnPointerReleased(relativePoint);
     }
 
-    void App::OnSizeChanged(winrt::CoreWindow const& window, winrt::WindowSizeChangedEventArgs const& args)
+    void App::OnSizeChanged(winrt::CoreWindow const& window, winrt::WindowSizeChangedEventArgs const&)
     {
         winrt::float2 const windowSize = { window.Bounds().Width, window.Bounds().Height };
         auto scale = ComputeScaleFactor(windowSize, m_content.Size());

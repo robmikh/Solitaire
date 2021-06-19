@@ -15,9 +15,9 @@
 #include <winrt/Windows.UI.Popups.h>
 
 #include <winrt/Microsoft.Graphics.Canvas.h>
+#include <winrt/Microsoft.Graphics.Canvas.Effects.h>
 #include <winrt/Microsoft.Graphics.Canvas.Geometry.h>
 #include <winrt/Microsoft.Graphics.Canvas.Svg.h>
-#include <winrt/Microsoft.Graphics.Canvas.Text.h>
 
 #include <vector>
 #include <memory>

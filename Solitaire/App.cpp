@@ -30,6 +30,7 @@ struct App : winrt::implements<App, winrt::IFrameworkViewSource, winrt::IFramewo
     winrt::Compositor m_compositor{ nullptr };
     winrt::CompositionTarget m_target{ nullptr };
     winrt::SpriteVisual m_root{ nullptr };
+    winrt::SpriteVisual m_background{ nullptr };
 
     std::unique_ptr<Game> m_game;
     winrt::ContainerVisual m_content{ nullptr };
@@ -75,13 +76,21 @@ struct App : winrt::implements<App, winrt::IFrameworkViewSource, winrt::IFramewo
         // Base visual tree
         m_root = m_compositor.CreateSpriteVisual();
         m_root.RelativeSizeAdjustment({ 1, 1 });
-        auto backgroundBrush = m_compositor.CreateRadialGradientBrush();
-        backgroundBrush.ColorStops().Append(m_compositor.CreateColorGradientStop(0.0f, { 255, 14, 144, 58 })); // ARGB
-        backgroundBrush.ColorStops().Append(m_compositor.CreateColorGradientStop(1.0f, { 255, 7, 69, 32 }));
-        m_root.Brush(backgroundBrush);
+        m_root.Brush(m_compositor.CreateColorBrush({ 255, 70, 70, 70 })); // ARGB
         m_root.Comment(L"Application Root");
         m_target = m_compositor.CreateTargetForCurrentView();
         m_target.Root(m_root);
+
+        m_background = m_compositor.CreateSpriteVisual();
+        m_background.AnchorPoint({ 0.5f, 0.5f });
+        m_background.RelativeOffsetAdjustment({ 0.5f, 0.5f, 0 });
+        auto diameter = ComputeRadius(windowSize) * 2.0f;
+        m_background.Size({ diameter, diameter });
+        auto backgroundBrush = m_compositor.CreateRadialGradientBrush();
+        backgroundBrush.ColorStops().Append(m_compositor.CreateColorGradientStop(0.0f, { 255, 14, 144, 58 }));
+        backgroundBrush.ColorStops().Append(m_compositor.CreateColorGradientStop(1.0f, { 255, 7, 69, 32 }));
+        m_background.Brush(backgroundBrush);
+        m_root.Children().InsertAtBottom(m_background);
 
         m_content = m_compositor.CreateContainerVisual();
         m_content.Size({ 1327, 1111 });
@@ -118,6 +127,11 @@ struct App : winrt::implements<App, winrt::IFrameworkViewSource, winrt::IFramewo
             winrt::make_float4x4_translation({ windowSize / 2.0f, 0 });
 
         return result;
+    }
+
+    float ComputeRadius(winrt::float2 const windowSize)
+    {
+        return std::sqrt((windowSize.x * windowSize.x) + (windowSize.y * windowSize.y)) / 2.0f;
     }
 
     winrt::float2 GetPointRelativeToContent(winrt::float2 const windowSize, winrt::float2 const point)
@@ -161,6 +175,9 @@ struct App : winrt::implements<App, winrt::IFrameworkViewSource, winrt::IFramewo
         auto scale = ComputeScaleFactor(windowSize, m_content.Size());
         m_content.Scale({ scale, scale, 1.0f });
         m_game->OnSizeChanged(m_content.Size());
+        // Update the background
+        auto diameter = ComputeRadius(windowSize) * 2.0f;
+        m_background.Size({ diameter, diameter });
     }
 
     void App::OnKeyUp(winrt::CoreWindow const& window, winrt::KeyEventArgs const& args)

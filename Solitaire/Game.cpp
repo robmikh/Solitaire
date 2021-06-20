@@ -392,7 +392,8 @@ std::pair<std::vector<std::shared_ptr<CardStack>>, int> Game::ConstructStacks(Pi
         stack->ForceLayout();
         auto baseVisual = stack->Base();
 
-        baseVisual.Offset({ (float)i * (cardSize.x + 15.0f), 0, 0 });
+        // TODO: Compute based on content width and card width
+        baseVisual.Offset({ (float)i * (cardSize.x + 26.33f), 0, 0 });
         playAreaVisuals.InsertAtTop(baseVisual);
 
         stacks.push_back(stack);

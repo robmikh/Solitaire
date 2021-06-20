@@ -52,8 +52,6 @@ struct App : winrt::implements<App, winrt::IFrameworkViewSource, winrt::IFramewo
     void Run()
     {
         winrt::CoreWindow window = winrt::CoreWindow::GetForCurrentThread();
-        //window.Activate();
-
         winrt::CoreDispatcher dispatcher = window.Dispatcher();
 
         // Load assets

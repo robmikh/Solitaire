@@ -10,6 +10,7 @@
 // WinRT
 #include <winrt/Windows.Foundation.h>
 #include <winrt/Windows.Foundation.Collections.h>
+#include <winrt/Windows.Foundation.Numerics.h>
 #include <winrt/Windows.ApplicationModel.Core.h>
 #include <winrt/Windows.Storage.h>
 #include <winrt/Windows.Storage.Streams.h>
@@ -17,11 +18,6 @@
 #include <winrt/Windows.UI.Composition.h>
 #include <winrt/Windows.UI.Input.h>
 #include <winrt/Windows.UI.Popups.h>
-
-// Win2D
-#include <winrt/Microsoft.Graphics.Canvas.h>
-#include <winrt/Microsoft.Graphics.Canvas.Geometry.h>
-#include <winrt/Microsoft.Graphics.Canvas.Svg.h>
 
 // WIL
 #include <wil/resource.h>
@@ -50,6 +46,7 @@
 #include "robmikh.common/d3dHelpers.h"
 #include "robmikh.common/direct3d11.interop.h"
 #include "robmikh.common/graphics.interop.h"
+#include "robmikh.common/stream.interop.h"
 
 // Helpers
 #include "DebugHelpers.h"

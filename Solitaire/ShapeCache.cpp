@@ -15,11 +15,11 @@ namespace winrt
     using namespace Windows::UI;
     using namespace Windows::UI::Core;
     using namespace Windows::UI::Composition;
+}
 
-    using namespace Microsoft::Graphics::Canvas;
-    using namespace Microsoft::Graphics::Canvas::Geometry;
-    using namespace Microsoft::Graphics::Canvas::Svg;
-    using namespace Microsoft::Graphics::Canvas::Text;
+namespace util
+{
+    using namespace robmikh::common::uwp;
 }
 
 std::wstring GetSvgFilePath(Card const& card);
@@ -65,7 +65,12 @@ winrt::IAsyncAction ShapeCache::FillCacheAsync(
         }
     }
 
-    auto device = winrt::CanvasDevice();
+    auto d3dDevice = util::CreateD3DDevice();
+    auto d2dFactory = util::CreateD2DFactory();
+    auto d2dDevice = util::CreateD2DDevice(d2dFactory, d3dDevice);
+    winrt::com_ptr<ID2D1DeviceContext> d2dContextBase;
+    winrt::check_hresult(d2dDevice->CreateDeviceContext(D2D1_DEVICE_CONTEXT_OPTIONS_NONE, d2dContextBase.put()));
+    auto d2dContext = d2dContextBase.as<ID2D1DeviceContext5>();
     m_geometryCache.clear();
     auto height = 34.0f; // TODO: I guess this should be hardcoded now, get the right number later
     for (auto& card : cards)
@@ -73,7 +78,10 @@ winrt::IAsyncAction ShapeCache::FillCacheAsync(
         auto filePath = GetSvgFilePath(card);
         auto file = co_await winrt::StorageFile::GetFileFromApplicationUriAsync(winrt::Uri(filePath));
         auto stream = co_await file.OpenReadAsync();
-        auto document = co_await winrt::CanvasSvgDocument::LoadAsync(device, stream);
+        auto istream = util::CreateStreamFromRandomAccessStream(stream);
+        D2D1_SIZE_F viewport = D2D1::SizeF(1, 1);
+        winrt::com_ptr<ID2D1SvgDocument> document;
+        winrt::check_hresult(d2dContext->CreateSvgDocument(istream.get(), viewport, document.put()));
         auto shapeInfo = SvgShapesBuilder::ConvertSvgDocumentToCompositionShapes(compositor, document);
 
         m_geometryCache.emplace(card, shapeInfo);

@@ -1,4 +1,6 @@
 #pragma once
+#include "Card.h"
+#include "SvgShapesBuilder.h"
 
 enum class ShapeType
 {
@@ -9,24 +11,24 @@ enum class ShapeType
 class ShapeCache
 {
 public:
-    ShapeCache(winrt::Windows::UI::Composition::Compositor const& compositor);
+    static std::future<std::shared_ptr<ShapeCache>> CreateAsync(winrt::Windows::UI::Composition::Compositor const& compositor);
     ~ShapeCache() {}
 
     winrt::Windows::UI::Composition::Compositor Compositor() { return m_compositor; }
-    winrt::Windows::UI::Composition::CompositionPathGeometry GetPathGeometry(winrt::hstring const& key);
+    SvgCompositionShapes GetCardFace(Card const& key);
     winrt::Windows::UI::Composition::CompositionShape GetShape(ShapeType shapeType);
     float TextHeight() { return m_textHeight; }
 
-private:
+    // Workaround for make_shared
+    ShapeCache() {}
 
-    void FillCache(
-        winrt::Windows::UI::Composition::Compositor const& compositor,
-        winrt::hstring const& fontFamily,
-        float fontSize);
+private:
+    winrt::Windows::Foundation::IAsyncAction FillCacheAsync(
+        winrt::Windows::UI::Composition::Compositor const& compositor);
 
 private:
     winrt::Windows::UI::Composition::Compositor m_compositor;
-    std::map<winrt::hstring, winrt::Windows::UI::Composition::CompositionPathGeometry> m_geometryCache;
+    std::map<Card, SvgCompositionShapes> m_geometryCache;
     std::map<ShapeType, winrt::Windows::UI::Composition::CompositionShape> m_shapeCache;
     float m_textHeight;
 };

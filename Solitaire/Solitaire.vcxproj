@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="..\packages\Microsoft.Windows.CppWinRT.2.0.190506.1\build\native\Microsoft.Windows.CppWinRT.props" Condition="Exists('..\packages\Microsoft.Windows.CppWinRT.2.0.190506.1\build\native\Microsoft.Windows.CppWinRT.props')" />
+  <Import Project="..\packages\Microsoft.Windows.CppWinRT.2.0.210312.4\build\native\Microsoft.Windows.CppWinRT.props" Condition="Exists('..\packages\Microsoft.Windows.CppWinRT.2.0.210312.4\build\native\Microsoft.Windows.CppWinRT.props')" />
   <PropertyGroup Label="Globals">
     <CppWinRTOptimized>true</CppWinRTOptimized>
     <MinimalCoreWin>true</MinimalCoreWin>
@@ -78,12 +78,11 @@
   <PropertyGroup Label="UserMacros">
     <GenerateAppInstallerFile>False</GenerateAppInstallerFile>
     <AppxPackageSigningEnabled>True</AppxPackageSigningEnabled>
-    <PackageCertificateKeyFile>C:\Users\robmi\source\repos\Solitaire\Solitaire\Solitaire_TemporaryKey.pfx</PackageCertificateKeyFile>
-    <PackageCertificateThumbprint>D7E7B947582ED60DDF45F497F5AA203BB574F20C</PackageCertificateThumbprint>
+    <PackageCertificateKeyFile>Solitaire_TemporaryKey.pfx</PackageCertificateKeyFile>
     <AppxPackageSigningTimestampDigestAlgorithm>SHA256</AppxPackageSigningTimestampDigestAlgorithm>
     <AppxAutoIncrementPackageRevision>True</AppxAutoIncrementPackageRevision>
     <GenerateTestArtifacts>True</GenerateTestArtifacts>
-    <AppxBundle>Always</AppxBundle>
+    <AppxBundle>Never</AppxBundle>
     <AppxBundlePlatforms>x86|x64|arm|arm64</AppxBundlePlatforms>
     <HoursBetweenUpdateChecks>0</HoursBetweenUpdateChecks>
   </PropertyGroup>
@@ -122,6 +121,7 @@
     <ClInclude Include="pch.h" />
     <ClInclude Include="Pile.h" />
     <ClInclude Include="ShapeCache.h" />
+    <ClInclude Include="SvgShapesBuilder.h" />
     <ClInclude Include="Waste.h" />
   </ItemGroup>
   <ItemGroup>
@@ -149,9 +149,166 @@
     <ClCompile Include="Pile.cpp" />
     <ClCompile Include="ShapeCache.cpp" />
     <ClCompile Include="CardStack.cpp" />
+    <ClCompile Include="SvgShapesBuilder.cpp" />
     <ClCompile Include="Waste.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="Assets\CardFaces\10_of_clubs.svg">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="Assets\CardFaces\10_of_diamonds.svg">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="Assets\CardFaces\10_of_hearts.svg">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="Assets\CardFaces\10_of_spades.svg">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="Assets\CardFaces\2_of_clubs.svg">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="Assets\CardFaces\2_of_diamonds.svg">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="Assets\CardFaces\2_of_hearts.svg">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="Assets\CardFaces\2_of_spades.svg">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="Assets\CardFaces\3_of_clubs.svg">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="Assets\CardFaces\3_of_diamonds.svg">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="Assets\CardFaces\3_of_hearts.svg">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="Assets\CardFaces\3_of_spades.svg">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="Assets\CardFaces\4_of_clubs.svg">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="Assets\CardFaces\4_of_diamonds.svg">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="Assets\CardFaces\4_of_hearts.svg">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="Assets\CardFaces\4_of_spades.svg">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="Assets\CardFaces\5_of_clubs.svg">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="Assets\CardFaces\5_of_diamonds.svg">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="Assets\CardFaces\5_of_hearts.svg">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="Assets\CardFaces\5_of_spades.svg">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="Assets\CardFaces\6_of_clubs.svg">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="Assets\CardFaces\6_of_diamonds.svg">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="Assets\CardFaces\6_of_hearts.svg">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="Assets\CardFaces\6_of_spades.svg">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="Assets\CardFaces\7_of_clubs.svg">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="Assets\CardFaces\7_of_diamonds.svg">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="Assets\CardFaces\7_of_hearts.svg">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="Assets\CardFaces\7_of_spades.svg">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="Assets\CardFaces\8_of_clubs.svg">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="Assets\CardFaces\8_of_diamonds.svg">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="Assets\CardFaces\8_of_hearts.svg">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="Assets\CardFaces\8_of_spades.svg">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="Assets\CardFaces\9_of_clubs.svg">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="Assets\CardFaces\9_of_diamonds.svg">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="Assets\CardFaces\9_of_hearts.svg">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="Assets\CardFaces\9_of_spades.svg">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="Assets\CardFaces\ace_of_clubs.svg">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="Assets\CardFaces\ace_of_diamonds.svg">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="Assets\CardFaces\ace_of_hearts.svg">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="Assets\CardFaces\ace_of_spades.svg">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="Assets\CardFaces\jack_of_clubs.svg">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="Assets\CardFaces\jack_of_diamonds.svg">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="Assets\CardFaces\jack_of_hearts.svg">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="Assets\CardFaces\jack_of_spades.svg">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="Assets\CardFaces\king_of_clubs.svg">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="Assets\CardFaces\king_of_diamonds.svg">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="Assets\CardFaces\king_of_hearts.svg">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="Assets\CardFaces\king_of_spades.svg">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="Assets\CardFaces\queen_of_clubs.svg">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="Assets\CardFaces\queen_of_diamonds.svg">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="Assets\CardFaces\queen_of_hearts.svg">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
+    <None Include="Assets\CardFaces\queen_of_spades.svg">
+      <DeploymentContent>true</DeploymentContent>
+    </None>
     <None Include="packages.config" />
     <None Include="Solitaire_TemporaryKey.pfx" />
   </ItemGroup>
@@ -160,15 +317,15 @@
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
-    <Import Project="..\packages\Microsoft.Windows.CppWinRT.2.0.190506.1\build\native\Microsoft.Windows.CppWinRT.targets" Condition="Exists('..\packages\Microsoft.Windows.CppWinRT.2.0.190506.1\build\native\Microsoft.Windows.CppWinRT.targets')" />
-    <Import Project="..\packages\Win2D.uwp.1.23.0\build\native\Win2D.uwp.targets" Condition="Exists('..\packages\Win2D.uwp.1.23.0\build\native\Win2D.uwp.targets')" />
+    <Import Project="..\packages\Microsoft.Windows.CppWinRT.2.0.210312.4\build\native\Microsoft.Windows.CppWinRT.targets" Condition="Exists('..\packages\Microsoft.Windows.CppWinRT.2.0.210312.4\build\native\Microsoft.Windows.CppWinRT.targets')" />
+    <Import Project="..\packages\Win2D.uwp.1.25.0\build\native\Win2D.uwp.targets" Condition="Exists('..\packages\Win2D.uwp.1.25.0\build\native\Win2D.uwp.targets')" />
   </ImportGroup>
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
       <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
     </PropertyGroup>
-    <Error Condition="!Exists('..\packages\Microsoft.Windows.CppWinRT.2.0.190506.1\build\native\Microsoft.Windows.CppWinRT.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Microsoft.Windows.CppWinRT.2.0.190506.1\build\native\Microsoft.Windows.CppWinRT.props'))" />
-    <Error Condition="!Exists('..\packages\Microsoft.Windows.CppWinRT.2.0.190506.1\build\native\Microsoft.Windows.CppWinRT.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Microsoft.Windows.CppWinRT.2.0.190506.1\build\native\Microsoft.Windows.CppWinRT.targets'))" />
-    <Error Condition="!Exists('..\packages\Win2D.uwp.1.23.0\build\native\Win2D.uwp.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Win2D.uwp.1.23.0\build\native\Win2D.uwp.targets'))" />
+    <Error Condition="!Exists('..\packages\Microsoft.Windows.CppWinRT.2.0.210312.4\build\native\Microsoft.Windows.CppWinRT.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Microsoft.Windows.CppWinRT.2.0.210312.4\build\native\Microsoft.Windows.CppWinRT.props'))" />
+    <Error Condition="!Exists('..\packages\Microsoft.Windows.CppWinRT.2.0.210312.4\build\native\Microsoft.Windows.CppWinRT.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Microsoft.Windows.CppWinRT.2.0.210312.4\build\native\Microsoft.Windows.CppWinRT.targets'))" />
+    <Error Condition="!Exists('..\packages\Win2D.uwp.1.25.0\build\native\Win2D.uwp.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Win2D.uwp.1.25.0\build\native\Win2D.uwp.targets'))" />
   </Target>
 </Project>

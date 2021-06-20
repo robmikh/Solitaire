@@ -3,7 +3,7 @@
   <Identity
     Name="2ff6a28d-b88a-4be7-843f-9cb29693bf40"
     Publisher="CN=robmi"
-    Version="1.0.0.0" />
+    Version="1.0.2.0" />
   <mp:PhoneIdentity PhoneProductId="2ff6a28d-b88a-4be7-843f-9cb29693bf40" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
   <Properties>
     <DisplayName>Solitaire</DisplayName>

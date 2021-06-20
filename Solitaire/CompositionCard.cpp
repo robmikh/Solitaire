@@ -14,11 +14,12 @@ namespace winrt
     using namespace Windows::UI::Composition;
 }
 
-const winrt::float2 CompositionCard::CardSize = { 175, 250 };
+const winrt::float2 CompositionCard::CardSize = { 167, 243 };
+const winrt::float2 CompositionCard::CornerRadius = { 9.5f, 9.5f };
 
 winrt::ShapeVisual BuildCardFront(
     std::shared_ptr<ShapeCache> const& shapeCache,
-    winrt::hstring const& card,
+    Card const& card,
     winrt::Color const& color)
 {
     auto compositor = shapeCache->Compositor();
@@ -28,22 +29,11 @@ winrt::ShapeVisual BuildCardFront(
     shapeVisual.Size(CompositionCard::CardSize);
     shapeVisual.BackfaceVisibility(winrt::CompositionBackfaceVisibility::Hidden);
 
-    auto roundedRectGeometry = compositor.CreateRoundedRectangleGeometry();
-    roundedRectGeometry.CornerRadius({ 10, 10 });
-    roundedRectGeometry.Size(CompositionCard::CardSize);
-    auto rectShape = compositor.CreateSpriteShape(roundedRectGeometry);
-    rectShape.StrokeBrush(compositor.CreateColorBrush(winrt::Colors::Gray()));
-    rectShape.FillBrush(compositor.CreateColorBrush(winrt::Colors::White()));
-    rectShape.StrokeThickness(2);
-    shapeContainer.Shapes().Append(rectShape);
+    auto shapeInfo = shapeCache->GetCardFace(card);
+    shapeContainer.Shapes().Append(shapeInfo.RootShape);
+    shapeVisual.ViewBox(shapeInfo.ViewBox);
 
-    auto pathGeometry = shapeCache->GetPathGeometry(card);
-    auto pathShape = compositor.CreateSpriteShape(pathGeometry);
-    pathShape.Offset({ 5, 0 });
-    pathShape.FillBrush(compositor.CreateColorBrush(color));
-    shapeContainer.Shapes().Append(pathShape);
-
-    shapeVisual.Comment(card);
+    shapeVisual.Comment(card.ToString());
 
     return shapeVisual;
 }
@@ -83,7 +73,7 @@ CompositionCard::CompositionCard(
     m_root.Children().InsertAtTop(m_sidesRoot);
     m_front = BuildCardFront(
         shapeCache,
-        card.ToString(),
+        card,
         card.IsRed() ? winrt::Colors::Crimson() : winrt::Colors::Black());
     m_sidesRoot.Children().InsertAtTop(m_front);
     m_back = BuildCardBack(shapeCache);

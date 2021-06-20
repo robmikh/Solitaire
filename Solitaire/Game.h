@@ -19,7 +19,10 @@ enum class HitTestZone
 class Game
 {
 public:
-    Game(winrt::Windows::UI::Composition::Compositor const& compositor, winrt::Windows::Foundation::Numerics::float2 const hostSize);
+    Game(
+        winrt::Windows::UI::Composition::Compositor const& compositor, 
+        winrt::Windows::Foundation::Numerics::float2 const hostSize,
+        std::shared_ptr<ShapeCache> const& shapeCache);
 
     winrt::Windows::UI::Composition::Visual Root() { return m_root; }
 

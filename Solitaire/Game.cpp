@@ -472,7 +472,6 @@ std::tuple<std::shared_ptr<Pile>, Pile::HitTestResult, HitTestZone> Game::HitTes
     winrt::float2 const point,
     std::initializer_list<Pile::HitTestTarget> const& desiredTargets)
 {
-
     {
         auto [result, stack] = ::HitTestPiles(point, m_zoneRects, m_stacks, HitTestZone::PlayArea, desiredTargets);
         if (result.Target != Pile::HitTestTarget::None)

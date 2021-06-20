@@ -122,7 +122,6 @@ SvgCompositionShapes SvgShapesBuilder::ConvertSvgDocumentToCompositionShapes(
 
     winrt::CompositionViewBox viewBox{ nullptr };
 
-    
     if (rootElement->IsAttributeSpecified(L"viewBox"))
     {
         auto rect = GetRectangleAttribute(rootElement, L"viewBox");

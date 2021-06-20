@@ -9,9 +9,6 @@
 #include "Foundation.h"
 #include "Game.h"
 
-// DEBUG
-#include "SvgShapesBuilder.h"
-
 namespace winrt
 {
     using namespace Windows;

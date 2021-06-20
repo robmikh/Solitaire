@@ -11,7 +11,7 @@ class SvgShapesBuilder
 public:
     static SvgCompositionShapes ConvertSvgDocumentToCompositionShapes(
         winrt::Windows::UI::Composition::Compositor const& compositor,
-        winrt::Microsoft::Graphics::Canvas::Svg::CanvasSvgDocument const& document);
+        winrt::com_ptr<ID2D1SvgDocument> const& document);
 
 private:
     SvgShapesBuilder() {}
@@ -53,18 +53,18 @@ private:
     static void ProcessSvgElement(
         std::stack<Presentation>& presentationStack,
         winrt::Windows::UI::Composition::CompositionContainerShape const& parentShape,
-        winrt::Microsoft::Graphics::Canvas::Svg::ICanvasSvgElement const& element);
+        winrt::com_ptr<ID2D1SvgElement> const& element);
 
     static std::shared_ptr<IBrushInfo> GetBrushInfo(
-        winrt::Microsoft::Graphics::Canvas::Svg::CanvasSvgNamedElement const& element,
-        winrt::hstring const& attributeName);
+        winrt::com_ptr<ID2D1SvgElement> const& element,
+        std::wstring const& attributeName);
 
     static std::shared_ptr<IBrushInfo> CreateBrushInfoFromId(
-        winrt::Microsoft::Graphics::Canvas::Svg::CanvasSvgDocument const& document,
-        winrt::hstring const& id);
+        winrt::com_ptr<ID2D1SvgDocument> const& document,
+        std::wstring const& id);
 
     static std::shared_ptr<IBrushInfo> CreateLinearGradientBrushInfo(
-        winrt::Microsoft::Graphics::Canvas::Svg::CanvasSvgNamedElement const& element);
+        winrt::com_ptr<ID2D1SvgElement> const& element);
 
     static winrt::Windows::UI::Composition::CompositionBrush CreateBrushFromBrushInfo(
         winrt::Windows::UI::Composition::Compositor const& compositor,

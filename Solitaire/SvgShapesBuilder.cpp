@@ -7,12 +7,107 @@ namespace winrt
     using namespace Windows::Foundation::Numerics;
     using namespace Windows::UI;
     using namespace Windows::UI::Composition;
-    using namespace Microsoft::Graphics::Canvas::Svg;
+}
+
+namespace util
+{
+    using namespace robmikh::common::uwp;
+}
+
+winrt::Color D2DColorToWinRTColor(D2D1_COLOR_F const& color)
+{
+    return winrt::Color
+    {
+        static_cast<uint8_t>(color.a * 255.0f),
+        static_cast<uint8_t>(color.r * 255.0f),
+        static_cast<uint8_t>(color.g * 255.0f),
+        static_cast<uint8_t>(color.b * 255.0f),
+    };
+}
+
+std::wstring GetTag(winrt::com_ptr<ID2D1SvgElement> const& element)
+{
+    auto length = element->GetTagNameLength();
+    std::wstring name(length + 1, 0);
+    element->GetTagName(name.data(), name.length());
+    name.resize(length);
+    return name;
+}
+
+D2D1_SVG_VIEWBOX GetRectangleAttribute(winrt::com_ptr<ID2D1SvgElement> const& element, std::wstring const& attributeName)
+{
+    D2D1_SVG_VIEWBOX rect = {};
+    winrt::check_hresult(element->GetAttributeValue(
+        attributeName.c_str(),
+        D2D1_SVG_ATTRIBUTE_POD_TYPE_VIEWBOX,
+        static_cast<void*>(&rect),
+        sizeof(rect)));
+    return rect;
+}
+
+std::wstring GetIdAttribute(winrt::com_ptr<ID2D1SvgElement> const& element, std::wstring const& attributeName)
+{
+    uint32_t attributeLength = 0;
+    winrt::check_hresult(element->GetAttributeValueLength(
+        attributeName.c_str(),
+        D2D1_SVG_ATTRIBUTE_STRING_TYPE_ID,
+        &attributeLength));
+    std::wstring result(attributeLength + 1, 0);
+    winrt::check_hresult(element->GetAttributeValue(
+        attributeName.c_str(),
+        D2D1_SVG_ATTRIBUTE_STRING_TYPE_ID,
+        result.data(),
+        result.length()));
+    result.resize(attributeLength);
+    return result;
+}
+
+float GetFloatAttribute(winrt::com_ptr<ID2D1SvgElement> const& element, std::wstring const& attributeName)
+{
+    float value = 0;
+    winrt::check_hresult(element->GetAttributeValue(
+        attributeName.c_str(),
+        &value));
+    return value;
+}
+
+winrt::float3x2 GetTransformAttribute(winrt::com_ptr<ID2D1SvgElement> const& element, std::wstring const& attributeName)
+{
+    winrt::float3x2 value = {};
+    winrt::check_hresult(element->GetAttributeValue(
+        attributeName.c_str(),
+        reinterpret_cast<D2D1_MATRIX_3X2_F*>(&value)));
+    return value;
+}
+
+winrt::Color GetColorAttribute(winrt::com_ptr<ID2D1SvgElement> const& element, std::wstring const& attributeName)
+{
+    D2D1_COLOR_F color = {};
+    winrt::check_hresult(element->GetAttributeValue(
+        attributeName.c_str(),
+        &color));
+    return D2DColorToWinRTColor(color);
+}
+
+std::vector<std::wstring> GetSpecifiedAttributes(winrt::com_ptr<ID2D1SvgElement> const& element)
+{
+    std::vector<std::wstring> names;
+    uint32_t count = element->GetSpecifiedAttributeCount();
+    for (auto i = 0; i < count; i++)
+    {
+        uint32_t length = 0;
+        winrt::check_hresult(element->GetSpecifiedAttributeNameLength(i, &length, FALSE));
+        std::wstring name(length + 1, 0);
+        winrt::check_hresult(element->GetSpecifiedAttributeName(i, name.data(), name.length(), FALSE));
+        name.resize(length);
+        names.push_back(name);
+    }
+    return names;
 }
 
 SvgCompositionShapes SvgShapesBuilder::ConvertSvgDocumentToCompositionShapes(
     winrt::Compositor const& compositor, 
-    winrt::CanvasSvgDocument const& document)
+    winrt::com_ptr<ID2D1SvgDocument> const& document)
 {
     auto rootVisual = compositor.CreateShapeVisual();
 
@@ -20,17 +115,20 @@ SvgCompositionShapes SvgShapesBuilder::ConvertSvgDocumentToCompositionShapes(
     // Techincally this is incorrect, as the spec specifically states that
     // having multiple "svg" elements embeded in each other is possible.
     // https://www.w3.org/TR/SVG11/struct.html
-    auto rootElement = document.Root();
-    WINRT_VERIFY(rootElement.Tag() == L"svg");
+    winrt::com_ptr<ID2D1SvgElement> rootElement;
+    document->GetRoot(rootElement.put());
+    auto tag = GetTag(rootElement);
+    WINRT_VERIFY(tag == L"svg");
 
     winrt::CompositionViewBox viewBox{ nullptr };
 
-    if (rootElement.IsAttributeSpecified(L"viewBox"))
+    
+    if (rootElement->IsAttributeSpecified(L"viewBox"))
     {
-        auto rect = rootElement.GetRectangleAttribute(L"viewBox");
+        auto rect = GetRectangleAttribute(rootElement, L"viewBox");
         viewBox = compositor.CreateViewBox();
-        viewBox.Size({ rect.Width, rect.Height });
-        viewBox.Offset({ rect.X, rect.Y });
+        viewBox.Size({ rect.width, rect.height });
+        viewBox.Offset({ rect.x, rect.y });
     }
 
     auto container = compositor.CreateContainerShape();
@@ -42,11 +140,14 @@ SvgCompositionShapes SvgShapesBuilder::ConvertSvgDocumentToCompositionShapes(
             1.0f
         });
 
-    auto child = rootElement.FirstChild();
+    winrt::com_ptr<ID2D1SvgElement> child;
+    rootElement->GetFirstChild(child.put());
     while (child != nullptr)
     {
         ProcessSvgElement(presentationStack, container, child);
-        child = rootElement.GetNextSibling(child);
+        winrt::com_ptr<ID2D1SvgElement> newChild;
+        winrt::check_hresult(rootElement->GetNextChild(child.get(), newChild.put()));
+        child = newChild;
     }
 
     return { viewBox, container };
@@ -55,9 +156,10 @@ SvgCompositionShapes SvgShapesBuilder::ConvertSvgDocumentToCompositionShapes(
 void SvgShapesBuilder::ProcessSvgElement(
     std::stack<Presentation>& presentationStack, 
     winrt::CompositionContainerShape const& parentShape,
-    winrt::ICanvasSvgElement const& element)
+    winrt::com_ptr<ID2D1SvgElement> const& element)
 {
-    if (auto current = element.try_as<winrt::CanvasSvgNamedElement>())
+    auto current = element;
+    if (!current->IsTextContent())
     {
         auto compositor = parentShape.Compositor();
         auto currentShape = compositor.CreateContainerShape();
@@ -67,26 +169,26 @@ void SvgShapesBuilder::ProcessSvgElement(
         Presentation presentation = currentPresentation;
 
         // Record the id for debugging
-        if (current.IsAttributeSpecified(L"id"))
+        if (current->IsAttributeSpecified(L"id"))
         {
-            auto id = current.GetIdAttribute(L"id");
+            auto id = GetIdAttribute(current, L"id");
             currentShape.Comment(id);
         }
 
         // General attributes
-        auto attributeNames = current.SpecifiedAttributes();
+        auto attributeNames = GetSpecifiedAttributes(current);
         for (auto&& attributeName : attributeNames) 
         {
             if (attributeName == L"x")
             {
                 auto offset = currentShape.Offset();
-                auto value = current.GetFloatAttribute(attributeName);
+                auto value = GetFloatAttribute(current, attributeName);
                 offset.x = value;
             }
             else if (attributeName == L"y")
             {
                 auto offset = currentShape.Offset();
-                auto value = current.GetFloatAttribute(attributeName);
+                auto value = GetFloatAttribute(current, attributeName);
                 offset.y = value;
             }
             else if (attributeName == L"fill")
@@ -99,18 +201,18 @@ void SvgShapesBuilder::ProcessSvgElement(
             }
             else if (attributeName == L"stroke-width")
             {
-                auto strokeWidth = current.GetFloatAttribute(attributeName);
+                auto strokeWidth = GetFloatAttribute(current, attributeName);
                 presentation.StrokeWidth = strokeWidth;
             }
             else if (attributeName == L"transform")
             {
-                auto transform = current.GetTransformAttribute(attributeName);
+                auto transform = GetTransformAttribute(current, attributeName);
                 currentShape.TransformMatrix(transform);
             }
         }
 
         // Special cases
-        auto tag = current.Tag();
+        auto tag = GetTag(current);
         if (tag == L"defs")
         {
             // TODO: Keep track of children, prevent them from rendering
@@ -119,16 +221,18 @@ void SvgShapesBuilder::ProcessSvgElement(
         }
         else if (tag == L"use")
         {
-            auto href = current.GetIdAttribute(L"xlink:href");
-            auto document = current.ContainingDocument();
-            auto reference = document.FindElementById(href);
+            auto href = GetIdAttribute(current, L"xlink:href");
+            winrt::com_ptr<ID2D1SvgDocument> document;
+            current->GetDocument(document.put());
+            winrt::com_ptr<ID2D1SvgElement> reference;
+            winrt::check_hresult(document->FindElementById(href.c_str(), reference.put()));
             ProcessSvgElement(presentationStack, currentShape, reference);
         }
         else if (tag == L"circle")
         {
-            auto centerX = current.GetFloatAttribute(L"cx");
-            auto centerY = current.GetFloatAttribute(L"cy");
-            auto radius = current.GetFloatAttribute(L"r");
+            auto centerX = GetFloatAttribute(current, L"cx");
+            auto centerY = GetFloatAttribute(current, L"cy");
+            auto radius =  GetFloatAttribute(current, L"r");
 
             auto geometry = compositor.CreateEllipseGeometry();
             geometry.Center({ centerX, centerY });
@@ -143,10 +247,10 @@ void SvgShapesBuilder::ProcessSvgElement(
         }
         else if (tag == L"rect")
         {
-            auto x = current.GetFloatAttribute(L"x");
-            auto y = current.GetFloatAttribute(L"y");
-            auto width = current.GetFloatAttribute(L"width");
-            auto height = current.GetFloatAttribute(L"height");
+            auto x = GetFloatAttribute(current, L"x");
+            auto y = GetFloatAttribute(current, L"y");
+            auto width = GetFloatAttribute(current, L"width");
+            auto height = GetFloatAttribute(current, L"height");
 
             auto geometry = compositor.CreateRectangleGeometry();
             geometry.Offset({ x, y });
@@ -162,9 +266,13 @@ void SvgShapesBuilder::ProcessSvgElement(
         else if (tag == L"g") { }
         else if (tag == L"path")
         {
-            auto attribute = current.GetAttribute(L"d").as<winrt::CanvasSvgPathAttribute>();
-            auto canvasGeometry = attribute.CreatePathGeometry();
-            auto compositionPath = winrt::CompositionPath(canvasGeometry);
+            winrt::com_ptr<ID2D1SvgAttribute> attribute;
+            winrt::check_hresult(current->GetAttributeValue(L"d", attribute.put()));
+            auto pathAttribute = attribute.as<ID2D1SvgPathData>();
+            winrt::com_ptr<ID2D1PathGeometry1> d2dGeometry;
+            winrt::check_hresult(pathAttribute->CreatePathGeometry(D2D1_FILL_MODE_ALTERNATE, d2dGeometry.put()));
+            auto geometrySource = winrt::make<util::GeometrySource>(d2dGeometry);
+            auto compositionPath = winrt::CompositionPath(geometrySource);
             auto pathGeometry = compositor.CreatePathGeometry(compositionPath);
             auto spriteShape = compositor.CreateSpriteShape(pathGeometry);
 
@@ -189,13 +297,16 @@ void SvgShapesBuilder::ProcessSvgElement(
         presentationStack.push(presentation);
 
         // Process children
-        if (current.HasChildren())
+        if (current->HasChildren())
         {
-            auto child = current.FirstChild();
+            winrt::com_ptr<ID2D1SvgElement> child;
+            current->GetFirstChild(child.put());
             while (child != nullptr)
             {
                 ProcessSvgElement(presentationStack, currentShape, child);
-                child = current.GetNextSibling(child);
+                winrt::com_ptr<ID2D1SvgElement> newChild;
+                winrt::check_hresult(current->GetNextChild(child.get(), newChild.put()));
+                child = newChild;
             }
         }
 
@@ -204,18 +315,32 @@ void SvgShapesBuilder::ProcessSvgElement(
 }
 
 std::shared_ptr<SvgShapesBuilder::IBrushInfo> SvgShapesBuilder::GetBrushInfo(
-    winrt::CanvasSvgNamedElement const& element, 
-    winrt::hstring const& attributeName)
+    winrt::com_ptr<ID2D1SvgElement> const& element, 
+    std::wstring const& attributeName)
 {
-    auto temp = element.GetAttribute(attributeName);
-    if (auto attribute = temp.try_as<winrt::CanvasSvgPaintAttribute>())
+    winrt::com_ptr<ID2D1SvgAttribute> attribute;
+    winrt::check_hresult(element->GetAttributeValue(attributeName.c_str(), attribute.put()));
+    if (auto paintAttribute = attribute.try_as<ID2D1SvgPaint>())
     {
-        switch (attribute.PaintType())
+        switch (paintAttribute->GetPaintType())
         {
-        case winrt::CanvasSvgPaintType::Color:
-            return std::make_shared<ColorBrushInfo>(attribute.Color());
-        case winrt::CanvasSvgPaintType::Uri:
-            return CreateBrushInfoFromId(element.ContainingDocument(), attribute.Id());
+        case D2D1_SVG_PAINT_TYPE_COLOR:
+        {
+            D2D1_COLOR_F color = {};
+            paintAttribute->GetColor(&color);
+            return std::make_shared<ColorBrushInfo>(D2DColorToWinRTColor(color));
+        }
+        case D2D1_SVG_PAINT_TYPE_URI:
+        {
+            uint32_t length = 0;
+            winrt::check_hresult(paintAttribute->GetIdLength());
+            std::wstring id(length + 1, 0);
+            winrt::check_hresult(paintAttribute->GetId(id.data(), length));
+            id.resize(length);
+            winrt::com_ptr<ID2D1SvgDocument> document;
+            element->GetDocument(document.put());
+            return CreateBrushInfoFromId(document, id);
+        }
         default:
             break;
         }
@@ -224,11 +349,12 @@ std::shared_ptr<SvgShapesBuilder::IBrushInfo> SvgShapesBuilder::GetBrushInfo(
 }
 
 std::shared_ptr<SvgShapesBuilder::IBrushInfo> SvgShapesBuilder::CreateBrushInfoFromId(
-    winrt::CanvasSvgDocument const& document, 
-    winrt::hstring const& id)
+    winrt::com_ptr<ID2D1SvgDocument> const& document,
+    std::wstring const& id)
 {
-    auto reference = document.FindElementById(id);
-    auto tag = reference.Tag();
+    winrt::com_ptr<ID2D1SvgElement> reference;
+    winrt::check_hresult(document->FindElementById(id.c_str(), reference.put()));
+    auto tag = GetTag(reference);
     if (tag == L"linearGradient")
     {
         return CreateLinearGradientBrushInfo(reference);
@@ -237,18 +363,20 @@ std::shared_ptr<SvgShapesBuilder::IBrushInfo> SvgShapesBuilder::CreateBrushInfoF
 }
 
 std::shared_ptr<SvgShapesBuilder::IBrushInfo> SvgShapesBuilder::CreateLinearGradientBrushInfo(
-    winrt::CanvasSvgNamedElement const& element)
+    winrt::com_ptr<ID2D1SvgElement> const& element)
 {
     std::vector<GradientStopInfo> stops;
-    if (element.HasChildren())
+    if (element->HasChildren())
     {
-        auto child = element.FirstChild();
+        winrt::com_ptr<ID2D1SvgElement> child;
+        element->GetFirstChild(child.put());
         while (child != nullptr)
         {
-            if (auto current = child.try_as<winrt::CanvasSvgNamedElement>())
+            auto current = child;
+            if (!current->IsTextContent())
             {
-                auto offset = current.GetFloatAttribute(L"offset");
-                auto color = current.GetColorAttribute(L"stop-color");
+                auto offset = GetFloatAttribute(current, L"offset");
+                auto color = GetColorAttribute(current, L"stop-color");
                 auto stop = GradientStopInfo{ offset, color };
                 stops.push_back(stop);
             }

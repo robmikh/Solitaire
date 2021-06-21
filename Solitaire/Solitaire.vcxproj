@@ -117,6 +117,7 @@
     <ClInclude Include="Deck.h" />
     <ClInclude Include="Foundation.h" />
     <ClInclude Include="Game.h" />
+    <ClInclude Include="GameApp.h" />
     <ClInclude Include="Pack.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="Pile.h" />
@@ -142,6 +143,7 @@
     <ClCompile Include="Deck.cpp" />
     <ClCompile Include="Foundation.cpp" />
     <ClCompile Include="Game.cpp" />
+    <ClCompile Include="GameApp.cpp" />
     <ClCompile Include="Pack.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>

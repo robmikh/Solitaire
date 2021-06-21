@@ -13,6 +13,7 @@
     <ClCompile Include="Pile.cpp" />
     <ClCompile Include="Game.cpp" />
     <ClCompile Include="SvgShapesBuilder.cpp" />
+    <ClCompile Include="GameApp.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
@@ -28,6 +29,7 @@
     <ClInclude Include="DebugHelpers.h" />
     <ClInclude Include="Game.h" />
     <ClInclude Include="SvgShapesBuilder.h" />
+    <ClInclude Include="GameApp.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="Assets\Logo.scale-100.png">

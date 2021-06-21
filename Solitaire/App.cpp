@@ -8,6 +8,7 @@
 #include "Deck.h"
 #include "Foundation.h"
 #include "Game.h"
+#include "GameApp.h"
 
 namespace winrt
 {
@@ -27,10 +28,7 @@ struct App : winrt::implements<App, winrt::IFrameworkViewSource, winrt::IFramewo
     winrt::Compositor m_compositor{ nullptr };
     winrt::CompositionTarget m_target{ nullptr };
     winrt::SpriteVisual m_root{ nullptr };
-    winrt::SpriteVisual m_background{ nullptr };
-
-    std::unique_ptr<Game> m_game;
-    winrt::ContainerVisual m_content{ nullptr };
+    std::shared_ptr<GameApp> m_game;
 
     winrt::IFrameworkView CreateView()
     {
@@ -64,181 +62,62 @@ struct App : winrt::implements<App, winrt::IFrameworkViewSource, winrt::IFramewo
 
     void SetWindow(winrt::CoreWindow const & window)
     {
-        winrt::float2 const windowSize = { window.Bounds().Width, window.Bounds().Height };
-
         m_compositor = winrt::Compositor();
 
         // Base visual tree
         m_root = m_compositor.CreateSpriteVisual();
         m_root.RelativeSizeAdjustment({ 1, 1 });
         m_root.Brush(m_compositor.CreateColorBrush({ 255, 70, 70, 70 })); // ARGB
-        m_root.Comment(L"Application Root");
         m_target = m_compositor.CreateTargetForCurrentView();
         m_target.Root(m_root);
-
-        m_background = m_compositor.CreateSpriteVisual();
-        m_background.AnchorPoint({ 0.5f, 0.5f });
-        m_background.RelativeOffsetAdjustment({ 0.5f, 0.5f, 0 });
-        auto diameter = ComputeRadius(windowSize) * 2.0f;
-        m_background.Size({ diameter, diameter });
-        auto backgroundBrush = m_compositor.CreateRadialGradientBrush();
-        backgroundBrush.ColorStops().Append(m_compositor.CreateColorGradientStop(0.0f, { 255, 14, 144, 58 }));
-        backgroundBrush.ColorStops().Append(m_compositor.CreateColorGradientStop(1.0f, { 255, 7, 69, 32 }));
-        m_background.Brush(backgroundBrush);
-        m_root.Children().InsertAtBottom(m_background);
-
-        m_content = m_compositor.CreateContainerVisual();
-        m_content.Size({ 1327, 1111 });
-        m_content.AnchorPoint({ 0.5f, 0.5f });
-        m_content.RelativeOffsetAdjustment({ 0.5f, 0.5f, 0.0f });
-        auto scale = ComputeScaleFactor(windowSize, m_content.Size());
-        m_content.Scale({ scale, scale, 1.0f });
-        m_root.Children().InsertAtTop(m_content);
-    }
-
-    float ComputeScaleFactor(winrt::float2 const windowSize, winrt::float2 const contentSize)
-    {
-        auto windowRatio = windowSize.x / windowSize.y;
-        auto contentRatio = contentSize.x / contentSize.y;
-
-        auto scaleFactor = windowSize.x / contentSize.x;
-        if (windowRatio > contentRatio)
-        {
-            scaleFactor = windowSize.y / contentSize.y;
-        }
-
-        return scaleFactor;
-    }
-
-    winrt::float4x4 ComputeContentTransform(winrt::float2 const windowSize, winrt::float2 const contentSize)
-    {
-        auto result = winrt::float4x4::identity();
-        winrt::float2 const anchorPoint = { 0.5f, 0.5f };
-        auto scale = ComputeScaleFactor(windowSize, contentSize);
-
-        result *=
-            winrt::make_float4x4_translation({ -1.0f * anchorPoint *contentSize, 0 }) *
-            winrt::make_float4x4_scale({ scale, scale, 1.0f }) *
-            winrt::make_float4x4_translation({ windowSize / 2.0f, 0 });
-
-        return result;
-    }
-
-    float ComputeRadius(winrt::float2 const windowSize)
-    {
-        return std::sqrt((windowSize.x * windowSize.x) + (windowSize.y * windowSize.y)) / 2.0f;
-    }
-
-    winrt::float2 GetPointRelativeToContent(winrt::float2 const windowSize, winrt::float2 const point)
-    {
-        auto transform = ComputeContentTransform(windowSize, m_content.Size());
-        auto interse = winrt::float4x4::identity();
-        if (invert(transform, &interse))
-        {
-            return winrt::Windows::Foundation::Numerics::transform(point, interse);
-        }
-        return { -1, -1 };
     }
 
     void OnPointerPressed(winrt::CoreWindow const& window, winrt::PointerEventArgs const & args)
     {
         winrt::float2 const point = args.CurrentPoint().Position();
-        winrt::float2 const windowSize = { window.Bounds().Width, window.Bounds().Height };
-        auto relativePoint = GetPointRelativeToContent(windowSize, point);
-        m_game->OnPointerPressed(relativePoint);
+        m_game->OnPointerPressed(
+            point,
+            args.CurrentPoint().Properties().IsRightButtonPressed(),
+            args.CurrentPoint().Properties().IsEraser());
     }
 
     void OnPointerMoved(winrt::CoreWindow const& window, winrt::PointerEventArgs const & args)
     {
         winrt::float2 const point = args.CurrentPoint().Position();
-        winrt::float2 const windowSize = { window.Bounds().Width, window.Bounds().Height };
-        auto relativePoint = GetPointRelativeToContent(windowSize, point);
-        m_game->OnPointerMoved(relativePoint);
+        m_game->OnPointerMoved(point);
+        
     }
 
     void OnPointerReleased(winrt::CoreWindow const& window, winrt::PointerEventArgs const& args)
     {
         winrt::float2 const point = args.CurrentPoint().Position();
-        winrt::float2 const windowSize = { window.Bounds().Width, window.Bounds().Height };
-        auto relativePoint = GetPointRelativeToContent(windowSize, point);
-        m_game->OnPointerReleased(relativePoint);
+        m_game->OnPointerReleased(
+            point,
+            args.CurrentPoint().Properties().IsRightButtonPressed(),
+            args.CurrentPoint().Properties().IsEraser());
     }
 
     void App::OnSizeChanged(winrt::CoreWindow const& window, winrt::WindowSizeChangedEventArgs const&)
     {
         winrt::float2 const windowSize = { window.Bounds().Width, window.Bounds().Height };
-        auto scale = ComputeScaleFactor(windowSize, m_content.Size());
-        m_content.Scale({ scale, scale, 1.0f });
-        m_game->OnSizeChanged(m_content.Size());
-        // Update the background
-        auto diameter = ComputeRadius(windowSize) * 2.0f;
-        m_background.Size({ diameter, diameter });
+        m_game->OnParentSizeChanged(windowSize);
     }
 
     void App::OnKeyUp(winrt::CoreWindow const& window, winrt::KeyEventArgs const& args)
     {
-        // If an animation is going, ignore the key
-        if (m_game->IsAnimating())
-        {
-            return;
-        }
-        const auto isControlDown = (window.GetKeyState(winrt::VirtualKey::Control) & winrt::CoreVirtualKeyStates::Down) == winrt::CoreVirtualKeyStates::Down;
-
         auto key = args.VirtualKey();
-        if (key == winrt::VirtualKey::T && isControlDown)
-        {
-            PrintTree(window);
-        }
-        else if (key == winrt::VirtualKey::Up ||
-            key == winrt::VirtualKey::Down ||
-            key == winrt::VirtualKey::Left ||
-            key == winrt::VirtualKey::Right)
-        {
-            auto layout = m_game->LayoutInfo();
-
-            if (key == winrt::VirtualKey::Up)
-            {
-                layout.CardStackVerticalOffset -= 5.0f;
-            }
-            else if (key == winrt::VirtualKey::Down)
-            {
-                layout.CardStackVerticalOffset += 5.0f;
-            }
-            else if (key == winrt::VirtualKey::Left)
-            {
-                layout.WasteHorizontalOffset -= 5.0f;
-            }
-            else if (key == winrt::VirtualKey::Right)
-            {
-                layout.WasteHorizontalOffset += 5.0f;
-            }
-
-            m_game->LayoutInfo(layout);
-        }
-        else if (key == winrt::VirtualKey::N && isControlDown)
-        {
-            m_game->NewGame();
-        }
-    }
-
-    void PrintTree(winrt::CoreWindow const& window)
-    {
-        std::wstringstream stringStream;
-        stringStream << L"Window Size: " << window.Bounds().Width << L", " << window.Bounds().Height << std::endl;
-        Debug::PrintTree(m_root, stringStream, 0);
-        Debug::OutputDebugStringStream(stringStream);
+        const auto isControlDown = (window.GetKeyState(winrt::VirtualKey::Control) & winrt::CoreVirtualKeyStates::Down) == winrt::CoreVirtualKeyStates::Down;
+        m_game->OnKeyUp(key, isControlDown);
     }
 
     winrt::IAsyncAction InitializeAsync(winrt::CoreWindow const& window)
     {
+        winrt::float2 const windowSize = { window.Bounds().Width, window.Bounds().Height };
         auto tempWindow = window;
         auto temp = this;
         auto dispatcher = window.Dispatcher();
-        auto shapeCache = co_await ShapeCache::CreateAsync(m_compositor);
+        m_game = co_await GameApp::CreateAsync(winrt::DispatcherQueue::GetForCurrentThread(), m_root, windowSize);
         co_await dispatcher;
-        auto size = m_content.Size();
-        m_game = std::make_unique<Game>(m_compositor, size, shapeCache);
-        m_content.Children().InsertAtTop(m_game->Root());
 
         tempWindow.PointerPressed({ temp, &App::OnPointerPressed });
         tempWindow.PointerMoved({ temp, &App::OnPointerMoved });

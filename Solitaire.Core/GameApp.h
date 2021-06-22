@@ -2,32 +2,28 @@
 #include "ShapeCache.h"
 #include "Game.h"
 
-class GameApp
+class GameApp : public ISolitaire
 {
 public:
-    static std::future<std::shared_ptr<GameApp>> CreateAsync(
-        winrt::Windows::System::DispatcherQueue uiThread,
-        winrt::Windows::UI::Composition::ContainerVisual parentVisual,
-        winrt::Windows::Foundation::Numerics::float2 parentSize);
     GameApp(
         std::shared_ptr<ShapeCache> shapeCache,
         winrt::Windows::UI::Composition::ContainerVisual const& parentVisual,
         winrt::Windows::Foundation::Numerics::float2 parentSize);
     ~GameApp() {}
 
-    void OnPointerMoved(winrt::Windows::Foundation::Numerics::float2 point);
-    void OnParentSizeChanged(winrt::Windows::Foundation::Numerics::float2 newSize);
+    void OnPointerMoved(winrt::Windows::Foundation::Numerics::float2 point) override;
+    void OnParentSizeChanged(winrt::Windows::Foundation::Numerics::float2 newSize) override;
     void OnPointerPressed(
         winrt::Windows::Foundation::Numerics::float2 point,
         bool isRightButton,
-        bool isEraser);
+        bool isEraser) override;
     void OnPointerReleased(
         winrt::Windows::Foundation::Numerics::float2 point,
         bool isRightButton,
-        bool isEraser);
+        bool isEraser) override;
     void OnKeyUp(
         winrt::Windows::System::VirtualKey key,
-        bool isControlDown);
+        bool isControlDown) override;
 
 private:
     void PrintTree(winrt::Windows::Foundation::Numerics::float2 windowSize);

@@ -1,14 +1,5 @@
 ﻿#include "pch.h"
-#include "Card.h"
-#include "ShapeCache.h"
-#include "CompositionCard.h"
-#include "Pack.h"
-#include "CardStack.h"
-#include "Waste.h"
-#include "Deck.h"
-#include "Foundation.h"
-#include "Game.h"
-#include "GameApp.h"
+#include "Solitaire.Core.h"
 
 namespace winrt
 {
@@ -28,7 +19,7 @@ struct App : winrt::implements<App, winrt::IFrameworkViewSource, winrt::IFramewo
     winrt::Compositor m_compositor{ nullptr };
     winrt::CompositionTarget m_target{ nullptr };
     winrt::SpriteVisual m_root{ nullptr };
-    std::shared_ptr<GameApp> m_game;
+    std::shared_ptr<ISolitaire> m_game;
 
     winrt::IFrameworkView CreateView()
     {
@@ -116,7 +107,7 @@ struct App : winrt::implements<App, winrt::IFrameworkViewSource, winrt::IFramewo
         auto tempWindow = window;
         auto temp = this;
         auto dispatcher = window.Dispatcher();
-        m_game = co_await GameApp::CreateAsync(winrt::DispatcherQueue::GetForCurrentThread(), m_root, windowSize);
+        m_game = co_await CreateSolitaireAsync(m_root, windowSize);
         co_await dispatcher;
 
         tempWindow.PointerPressed({ temp, &App::OnPointerPressed });

@@ -48,3 +48,9 @@
 #include "robmikh.common/direct3d11.interop.h"
 #include "robmikh.common/graphics.interop.h"
 #include "robmikh.common/stream.interop.h"
+
+// Helpers
+#include "DebugHelpers.h"
+
+// Solitaire
+#include "Solitaire.Core.h"

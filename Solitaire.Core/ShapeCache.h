@@ -11,7 +11,9 @@ enum class ShapeType
 class ShapeCache
 {
 public:
-    static std::future<std::shared_ptr<ShapeCache>> CreateAsync(winrt::Windows::UI::Composition::Compositor const& compositor);
+    static std::future<std::shared_ptr<ShapeCache>> CreateAsync(
+        winrt::Windows::UI::Composition::Compositor const& compositor,
+        winrt::Windows::Storage::StorageFolder const& assetsFolder);
     ~ShapeCache() {}
 
     winrt::Windows::UI::Composition::Compositor Compositor() { return m_compositor; }
@@ -24,7 +26,8 @@ public:
 
 private:
     winrt::Windows::Foundation::IAsyncAction FillCacheAsync(
-        winrt::Windows::UI::Composition::Compositor const& compositor);
+        winrt::Windows::UI::Composition::Compositor const& compositor,
+        winrt::Windows::Storage::StorageFolder const& assetsFolder);
 
 private:
     winrt::Windows::UI::Composition::Compositor m_compositor;

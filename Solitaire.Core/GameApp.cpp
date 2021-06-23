@@ -14,6 +14,7 @@ namespace winrt
     using namespace Windows::Foundation;
     using namespace Windows::Foundation::Numerics;
     using namespace Windows::UI::Composition;
+    using namespace Windows::Storage;
     using namespace Windows::System;
 }
 
@@ -50,14 +51,13 @@ float ComputeRadius(winrt::float2 const windowSize)
     return std::sqrt((windowSize.x * windowSize.x) + (windowSize.y * windowSize.y)) / 2.0f;
 }
 
-std::future<std::shared_ptr<GameApp>> GameApp::CreateAsync(
-    winrt::DispatcherQueue uiThread,
+std::future<std::shared_ptr<ISolitaire>> CreateSolitaireAsync(
     winrt::ContainerVisual parentVisual, 
-    winrt::float2 parentSize)
+    winrt::float2 parentSize,
+    winrt::StorageFolder assetsFolder)
 {
     auto compositor = parentVisual.Compositor();
-    co_await winrt::resume_foreground(uiThread);
-    auto shapeCache = co_await ShapeCache::CreateAsync(compositor);
+    auto shapeCache = co_await ShapeCache::CreateAsync(compositor, assetsFolder);
     auto app = std::make_shared<GameApp>(shapeCache, parentVisual, parentSize);
     co_return app;
 }
@@ -67,6 +67,8 @@ GameApp::GameApp(
     winrt::ContainerVisual const& parentVisual, 
     winrt::float2 parentSize)
 {
+    m_lastParentSize = parentSize;
+
     auto compositor = parentVisual.Compositor();
     // Base visual tree
     m_root = compositor.CreateSpriteVisual();

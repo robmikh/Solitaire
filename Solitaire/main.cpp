@@ -1,14 +1,5 @@
 ﻿#include "pch.h"
-#include "Card.h"
-#include "ShapeCache.h"
-#include "CompositionCard.h"
-#include "Pack.h"
-#include "CardStack.h"
-#include "Waste.h"
-#include "Deck.h"
-#include "Foundation.h"
-#include "Game.h"
-#include "GameApp.h"
+#include "Solitaire.Core.h"
 
 namespace winrt
 {
@@ -16,6 +7,7 @@ namespace winrt
     using namespace Windows::ApplicationModel::Core;
     using namespace Windows::Foundation;
     using namespace Windows::Foundation::Numerics;
+    using namespace Windows::Storage;
     using namespace Windows::System;
     using namespace Windows::UI;
     using namespace Windows::UI::Core;
@@ -28,7 +20,7 @@ struct App : winrt::implements<App, winrt::IFrameworkViewSource, winrt::IFramewo
     winrt::Compositor m_compositor{ nullptr };
     winrt::CompositionTarget m_target{ nullptr };
     winrt::SpriteVisual m_root{ nullptr };
-    std::shared_ptr<GameApp> m_game;
+    std::shared_ptr<ISolitaire> m_game;
 
     winrt::IFrameworkView CreateView()
     {
@@ -116,7 +108,8 @@ struct App : winrt::implements<App, winrt::IFrameworkViewSource, winrt::IFramewo
         auto tempWindow = window;
         auto temp = this;
         auto dispatcher = window.Dispatcher();
-        m_game = co_await GameApp::CreateAsync(winrt::DispatcherQueue::GetForCurrentThread(), m_root, windowSize);
+        auto assetsFolder = co_await winrt::StorageFolder::GetFolderFromPathAsync(GetAssetsPath());
+        m_game = co_await CreateSolitaireAsync(m_root, windowSize, assetsFolder);
         co_await dispatcher;
 
         tempWindow.PointerPressed({ temp, &App::OnPointerPressed });
@@ -127,6 +120,14 @@ struct App : winrt::implements<App, winrt::IFrameworkViewSource, winrt::IFramewo
 
         tempWindow.Activate();
         co_return;
+    }
+
+    winrt::hstring GetAssetsPath()
+    {
+        std::wstringstream path;
+        auto root = winrt::Windows::ApplicationModel::Package::Current().InstalledLocation().Path();
+        path << root.c_str() << L"\\Assets\\";
+        return winrt::hstring(path.str());
     }
 };
 

@@ -1,35 +1,11 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <ClCompile Include="App.cpp" />
+    <ClCompile Include="main.cpp" />
     <ClCompile Include="pch.cpp" />
-    <ClCompile Include="ShapeCache.cpp" />
-    <ClCompile Include="Pack.cpp" />
-    <ClCompile Include="CardStack.cpp" />
-    <ClCompile Include="CompositionCard.cpp" />
-    <ClCompile Include="Waste.cpp" />
-    <ClCompile Include="Deck.cpp" />
-    <ClCompile Include="Foundation.cpp" />
-    <ClCompile Include="Pile.cpp" />
-    <ClCompile Include="Game.cpp" />
-    <ClCompile Include="SvgShapesBuilder.cpp" />
-    <ClCompile Include="GameApp.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h" />
-    <ClInclude Include="ShapeCache.h" />
-    <ClInclude Include="Pack.h" />
-    <ClInclude Include="Card.h" />
-    <ClInclude Include="CardStack.h" />
-    <ClInclude Include="CompositionCard.h" />
-    <ClInclude Include="Waste.h" />
-    <ClInclude Include="Deck.h" />
-    <ClInclude Include="Foundation.h" />
-    <ClInclude Include="Pile.h" />
-    <ClInclude Include="DebugHelpers.h" />
-    <ClInclude Include="Game.h" />
-    <ClInclude Include="SvgShapesBuilder.h" />
-    <ClInclude Include="GameApp.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="Assets\Logo.scale-100.png">
@@ -53,170 +29,11 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Solitaire_TemporaryKey.pfx" />
-    <None Include="Assets\CardFaces\2_of_clubs.svg">
-      <Filter>Assets\CardFaces</Filter>
-    </None>
-    <None Include="Assets\CardFaces\2_of_diamonds.svg">
-      <Filter>Assets\CardFaces</Filter>
-    </None>
-    <None Include="Assets\CardFaces\2_of_hearts.svg">
-      <Filter>Assets\CardFaces</Filter>
-    </None>
-    <None Include="Assets\CardFaces\2_of_spades.svg">
-      <Filter>Assets\CardFaces</Filter>
-    </None>
-    <None Include="Assets\CardFaces\3_of_clubs.svg">
-      <Filter>Assets\CardFaces</Filter>
-    </None>
-    <None Include="Assets\CardFaces\3_of_diamonds.svg">
-      <Filter>Assets\CardFaces</Filter>
-    </None>
-    <None Include="Assets\CardFaces\3_of_hearts.svg">
-      <Filter>Assets\CardFaces</Filter>
-    </None>
-    <None Include="Assets\CardFaces\3_of_spades.svg">
-      <Filter>Assets\CardFaces</Filter>
-    </None>
-    <None Include="Assets\CardFaces\4_of_clubs.svg">
-      <Filter>Assets\CardFaces</Filter>
-    </None>
-    <None Include="Assets\CardFaces\4_of_diamonds.svg">
-      <Filter>Assets\CardFaces</Filter>
-    </None>
-    <None Include="Assets\CardFaces\4_of_hearts.svg">
-      <Filter>Assets\CardFaces</Filter>
-    </None>
-    <None Include="Assets\CardFaces\4_of_spades.svg">
-      <Filter>Assets\CardFaces</Filter>
-    </None>
-    <None Include="Assets\CardFaces\5_of_clubs.svg">
-      <Filter>Assets\CardFaces</Filter>
-    </None>
-    <None Include="Assets\CardFaces\5_of_diamonds.svg">
-      <Filter>Assets\CardFaces</Filter>
-    </None>
-    <None Include="Assets\CardFaces\5_of_hearts.svg">
-      <Filter>Assets\CardFaces</Filter>
-    </None>
-    <None Include="Assets\CardFaces\5_of_spades.svg">
-      <Filter>Assets\CardFaces</Filter>
-    </None>
-    <None Include="Assets\CardFaces\6_of_clubs.svg">
-      <Filter>Assets\CardFaces</Filter>
-    </None>
-    <None Include="Assets\CardFaces\6_of_diamonds.svg">
-      <Filter>Assets\CardFaces</Filter>
-    </None>
-    <None Include="Assets\CardFaces\6_of_hearts.svg">
-      <Filter>Assets\CardFaces</Filter>
-    </None>
-    <None Include="Assets\CardFaces\6_of_spades.svg">
-      <Filter>Assets\CardFaces</Filter>
-    </None>
-    <None Include="Assets\CardFaces\7_of_clubs.svg">
-      <Filter>Assets\CardFaces</Filter>
-    </None>
-    <None Include="Assets\CardFaces\7_of_diamonds.svg">
-      <Filter>Assets\CardFaces</Filter>
-    </None>
-    <None Include="Assets\CardFaces\7_of_hearts.svg">
-      <Filter>Assets\CardFaces</Filter>
-    </None>
-    <None Include="Assets\CardFaces\7_of_spades.svg">
-      <Filter>Assets\CardFaces</Filter>
-    </None>
-    <None Include="Assets\CardFaces\8_of_clubs.svg">
-      <Filter>Assets\CardFaces</Filter>
-    </None>
-    <None Include="Assets\CardFaces\8_of_diamonds.svg">
-      <Filter>Assets\CardFaces</Filter>
-    </None>
-    <None Include="Assets\CardFaces\8_of_hearts.svg">
-      <Filter>Assets\CardFaces</Filter>
-    </None>
-    <None Include="Assets\CardFaces\8_of_spades.svg">
-      <Filter>Assets\CardFaces</Filter>
-    </None>
-    <None Include="Assets\CardFaces\9_of_clubs.svg">
-      <Filter>Assets\CardFaces</Filter>
-    </None>
-    <None Include="Assets\CardFaces\9_of_diamonds.svg">
-      <Filter>Assets\CardFaces</Filter>
-    </None>
-    <None Include="Assets\CardFaces\9_of_hearts.svg">
-      <Filter>Assets\CardFaces</Filter>
-    </None>
-    <None Include="Assets\CardFaces\9_of_spades.svg">
-      <Filter>Assets\CardFaces</Filter>
-    </None>
-    <None Include="Assets\CardFaces\10_of_clubs.svg">
-      <Filter>Assets\CardFaces</Filter>
-    </None>
-    <None Include="Assets\CardFaces\10_of_diamonds.svg">
-      <Filter>Assets\CardFaces</Filter>
-    </None>
-    <None Include="Assets\CardFaces\10_of_hearts.svg">
-      <Filter>Assets\CardFaces</Filter>
-    </None>
-    <None Include="Assets\CardFaces\10_of_spades.svg">
-      <Filter>Assets\CardFaces</Filter>
-    </None>
-    <None Include="Assets\CardFaces\ace_of_clubs.svg">
-      <Filter>Assets\CardFaces</Filter>
-    </None>
-    <None Include="Assets\CardFaces\ace_of_diamonds.svg">
-      <Filter>Assets\CardFaces</Filter>
-    </None>
-    <None Include="Assets\CardFaces\ace_of_hearts.svg">
-      <Filter>Assets\CardFaces</Filter>
-    </None>
-    <None Include="Assets\CardFaces\ace_of_spades.svg">
-      <Filter>Assets\CardFaces</Filter>
-    </None>
-    <None Include="Assets\CardFaces\jack_of_clubs.svg">
-      <Filter>Assets\CardFaces</Filter>
-    </None>
-    <None Include="Assets\CardFaces\jack_of_diamonds.svg">
-      <Filter>Assets\CardFaces</Filter>
-    </None>
-    <None Include="Assets\CardFaces\jack_of_hearts.svg">
-      <Filter>Assets\CardFaces</Filter>
-    </None>
-    <None Include="Assets\CardFaces\jack_of_spades.svg">
-      <Filter>Assets\CardFaces</Filter>
-    </None>
-    <None Include="Assets\CardFaces\king_of_clubs.svg">
-      <Filter>Assets\CardFaces</Filter>
-    </None>
-    <None Include="Assets\CardFaces\king_of_diamonds.svg">
-      <Filter>Assets\CardFaces</Filter>
-    </None>
-    <None Include="Assets\CardFaces\king_of_hearts.svg">
-      <Filter>Assets\CardFaces</Filter>
-    </None>
-    <None Include="Assets\CardFaces\king_of_spades.svg">
-      <Filter>Assets\CardFaces</Filter>
-    </None>
-    <None Include="Assets\CardFaces\queen_of_clubs.svg">
-      <Filter>Assets\CardFaces</Filter>
-    </None>
-    <None Include="Assets\CardFaces\queen_of_diamonds.svg">
-      <Filter>Assets\CardFaces</Filter>
-    </None>
-    <None Include="Assets\CardFaces\queen_of_hearts.svg">
-      <Filter>Assets\CardFaces</Filter>
-    </None>
-    <None Include="Assets\CardFaces\queen_of_spades.svg">
-      <Filter>Assets\CardFaces</Filter>
-    </None>
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Assets">
       <UniqueIdentifier>{db9086fe-bacc-4437-8272-1aa6642082db}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Assets\CardFaces">
-      <UniqueIdentifier>{dcdb7ec8-9194-41ff-ab0b-98d930e77dc3}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>

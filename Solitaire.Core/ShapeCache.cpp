@@ -22,7 +22,7 @@ namespace util
     using namespace robmikh::common::uwp;
 }
 
-std::wstring GetSvgFilePath(Card const& card);
+std::wstring GetSvgFileName(Card const& card);
 winrt::CompositionSpriteShape BuildRoundedRectShape(
     winrt::Compositor const& compositor,
     winrt::float2 const& size,
@@ -32,10 +32,11 @@ winrt::CompositionSpriteShape BuildRoundedRectShape(
     winrt::CompositionBrush const& fillBrush);
 
 std::future<std::shared_ptr<ShapeCache>> ShapeCache::CreateAsync(
-    winrt::Compositor const& compositor)
+    winrt::Compositor const& compositor,
+    winrt::StorageFolder const& assetsFolder)
 {
     auto cache = std::make_shared<ShapeCache>();
-    co_await cache->FillCacheAsync(compositor);
+    co_await cache->FillCacheAsync(compositor, assetsFolder);
     co_return cache;
 }
 
@@ -51,7 +52,8 @@ winrt::CompositionShape ShapeCache::GetShape(ShapeType shapeType)
 }
 
 winrt::IAsyncAction ShapeCache::FillCacheAsync(
-    winrt::Compositor const& compositor)
+    winrt::Compositor const& compositor,
+    winrt::StorageFolder const& assetsFolder)
 {
     std::vector<Card> cards;
     for (auto i = 0; i < (int)Face::King; i++)
@@ -73,10 +75,11 @@ winrt::IAsyncAction ShapeCache::FillCacheAsync(
     auto d2dContext = d2dContextBase.as<ID2D1DeviceContext5>();
     m_geometryCache.clear();
     auto height = 34.0f; // TODO: I guess this should be hardcoded now, get the right number later
+    auto cardFacesFolder = co_await assetsFolder.GetFolderAsync(L"CardFaces");
     for (auto& card : cards)
     {
-        auto filePath = GetSvgFilePath(card);
-        auto file = co_await winrt::StorageFile::GetFileFromApplicationUriAsync(winrt::Uri(filePath));
+        auto fileName = GetSvgFileName(card);
+        auto file = co_await cardFacesFolder.GetFileAsync(fileName);
         auto stream = co_await file.OpenReadAsync();
         auto istream = util::CreateStreamFromRandomAccessStream(stream);
         D2D1_SIZE_F viewport = D2D1::SizeF(1, 1);
@@ -146,10 +149,9 @@ winrt::IAsyncAction ShapeCache::FillCacheAsync(
     co_return;
 }
 
-std::wstring GetSvgFilePath(Card const& card)
+std::wstring GetSvgFileName(Card const& card)
 {
     std::wstringstream fileName;
-    fileName << L"ms-appx:///Assets/CardFaces/";
     switch (card.Face())
     {
     case Face::Ace:

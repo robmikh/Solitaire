@@ -14,6 +14,7 @@ namespace winrt
     using namespace Windows::Foundation;
     using namespace Windows::Foundation::Numerics;
     using namespace Windows::UI::Composition;
+    using namespace Windows::Storage;
     using namespace Windows::System;
 }
 
@@ -52,10 +53,11 @@ float ComputeRadius(winrt::float2 const windowSize)
 
 std::future<std::shared_ptr<ISolitaire>> CreateSolitaireAsync(
     winrt::ContainerVisual parentVisual, 
-    winrt::float2 parentSize)
+    winrt::float2 parentSize,
+    winrt::StorageFolder assetsFolder)
 {
     auto compositor = parentVisual.Compositor();
-    auto shapeCache = co_await ShapeCache::CreateAsync(compositor);
+    auto shapeCache = co_await ShapeCache::CreateAsync(compositor, assetsFolder);
     auto app = std::make_shared<GameApp>(shapeCache, parentVisual, parentSize);
     co_return app;
 }

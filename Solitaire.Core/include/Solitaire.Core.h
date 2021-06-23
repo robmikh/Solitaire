@@ -22,4 +22,5 @@ public:
 
 std::future<std::shared_ptr<ISolitaire>> CreateSolitaireAsync(
     winrt::Windows::UI::Composition::ContainerVisual parentVisual,
-    winrt::Windows::Foundation::Numerics::float2 parentSize);
+    winrt::Windows::Foundation::Numerics::float2 parentSize,
+    winrt::Windows::Storage::StorageFolder assetsFolder);
